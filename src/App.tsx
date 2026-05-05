@@ -146,6 +146,7 @@ function App() {
         setRoom(nextRoom)
         setSetupDraft({ service: nextRoom.service, title: nextRoom.title, targetTimestamp: nextRoom.targetTimestamp })
         setJoinCode(nextRoom.roomId)
+        setCopyStatus((current) => (current === 'Creating room...' || current === 'Joining room...' ? '' : current))
         localStorage.setItem(CURRENT_ROOM_KEY, nextRoom.roomId)
         window.history.replaceState(null, '', `?room=${nextRoom.roomId}`)
       },
@@ -480,6 +481,104 @@ function App() {
     setRecommendationStatus('Showing the safe mock catalog. Live TMDB search can be retried any time.')
   }
 
+  function openRecommendDrawer(nextOpen = true) {
+    setShowRecommendDrawer(nextOpen)
+    if (nextOpen) {
+      setShowTvRemoteDrawer(false)
+      setShowLaptopDrawer(false)
+      setShowChat(false)
+    }
+  }
+
+  function openTvRemoteDrawer(nextOpen = true) {
+    setShowTvRemoteDrawer(nextOpen)
+    if (nextOpen) {
+      setShowRecommendDrawer(false)
+      setShowLaptopDrawer(false)
+      setShowChat(false)
+    }
+  }
+
+  function openLaptopAutoDrawer(nextOpen = true) {
+    setShowLaptopDrawer(nextOpen)
+    if (nextOpen) {
+      setShowRecommendDrawer(false)
+      setShowTvRemoteDrawer(false)
+      setShowChat(false)
+    }
+  }
+
+  function toggleChatPanel() {
+    setShowChat((current) => {
+      const nextOpen = !current
+      if (nextOpen) {
+        setShowRecommendDrawer(false)
+        setShowTvRemoteDrawer(false)
+        setShowLaptopDrawer(false)
+      }
+      return nextOpen
+    })
+  }
+
+  function clearRecommendationFilters() {
+    setSelectedRecommendationProviders([])
+    setRecommendationStatus('Provider filters cleared. Browse TMDB or search again across all services.')
+  }
+
+  async function searchAllServices() {
+    setSelectedRecommendationProviders([])
+    const query = recommendationQuery.trim()
+    if (!query) {
+      setRecommendationStatus('Provider filters cleared. Browsing TMDB across all services...')
+      try {
+        const response = await fetch(buildRecommendationDiscoverApiUrl({
+          providers: [],
+          mediaType: recommendationMediaType,
+          category: recommendationCategory,
+          region: 'US',
+        }))
+        const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
+        if (!response.ok || payload.ok === false) {
+          setRecommendationSource('mock')
+          setLiveRecommendationResults([])
+          setRecommendationStatus(`${payload.error ?? `TMDB discover returned ${response.status}`} Provider filters are cleared; showing mock catalog instead.`)
+          return
+        }
+        setLiveRecommendationResults(payload.items ?? [])
+        setRecommendationSource('tmdb')
+        setRecommendationStatus((payload.items?.length ?? 0) > 0
+          ? 'Showing TMDB browse results across all services. Availability can vary by region, account plan, and date.'
+          : 'TMDB returned no titles across all services for this tab. Try another tab/search or use mock cards.')
+      } catch (error) {
+        setRecommendationSource('mock')
+        setLiveRecommendationResults([])
+        setRecommendationStatus(error instanceof Error ? `${error.message}. Provider filters are cleared; showing mock catalog instead.` : 'TMDB browse failed after clearing filters. Showing mock catalog instead.')
+      }
+      return
+    }
+
+    setRecommendationStatus('Provider filters cleared. Searching TMDB across all services...')
+    try {
+      const response = await fetch(buildRecommendationSearchApiUrl(query, [], 'US'))
+      const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
+      if (!response.ok || payload.ok === false) {
+        setRecommendationSource('mock')
+        setLiveRecommendationResults([])
+        setRecommendationStatus(`${payload.error ?? `TMDB search returned ${response.status}`} Provider filters are cleared; showing mock catalog instead.`)
+        return
+      }
+      setLiveRecommendationResults(payload.items ?? [])
+      setRecommendationSource('tmdb')
+      setRecommendationStatus((payload.items?.length ?? 0) > 0
+        ? 'Showing live TMDB results across all services. Provider availability can vary by region, account, and date.'
+        : 'TMDB returned no matching titles across all services. Try another search or use mock cards.')
+    } catch (error) {
+      setRecommendationSource('mock')
+      setLiveRecommendationResults([])
+      setRecommendationStatus(error instanceof Error ? `${error.message}. Provider filters are cleared; showing mock catalog instead.` : 'TMDB search failed after clearing filters. Showing mock catalog instead.')
+    }
+  }
+
   function findRecommendationItem(sourceId: string): WatchRecommendation | undefined {
     return recommendationResults.find((candidate) => candidate.sourceId === sourceId)
       ?? recommendationMessages.find((event) => event.item.sourceId === sourceId)?.item
@@ -730,7 +829,7 @@ function App() {
 
       <section className="control-stack" aria-label="Room controls">
         <div className="quick-actions">
-          <button className="secondary-action" type="button" onClick={() => setShowChat(!showChat)} aria-expanded={showChat}>
+          <button className="secondary-action" type="button" onClick={toggleChatPanel} aria-expanded={showChat}>
             <span>Chat</span>
             {chatMessages.length > 0 && <small>{chatMessages.length}</small>}
           </button>
@@ -738,10 +837,10 @@ function App() {
           <button className="secondary-action" type="button" onClick={() => setShowSetupSheet(!showSetupSheet)} aria-expanded={setupOpen}>
             Time
           </button>
-          <button className="secondary-action" type="button" onClick={() => setShowRecommendDrawer(!showRecommendDrawer)} aria-expanded={showRecommendDrawer}>
+          <button className="secondary-action" type="button" onClick={() => openRecommendDrawer(!showRecommendDrawer)} aria-expanded={showRecommendDrawer}>
             Find watch
           </button>
-          <button className="secondary-action" type="button" onClick={() => setShowTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
+          <button className="secondary-action" type="button" onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
             TV remote
           </button>
         </div>
@@ -814,7 +913,7 @@ function App() {
           <button
             className={`drawer-toggle ${showRecommendDrawer ? 'open' : ''}`}
             type="button"
-            onClick={() => setShowRecommendDrawer(!showRecommendDrawer)}
+            onClick={() => openRecommendDrawer(!showRecommendDrawer)}
             aria-expanded={showRecommendDrawer}
           >
             <span>Find next watch</span>
@@ -852,6 +951,11 @@ function App() {
                 <span className={`source-pill ${recommendationSource}`}>{recommendationSource === 'tmdb' ? 'Live' : 'Mock'}</span>
               </div>
               <p className="mode-caveat">{recommendationStatus}</p>
+              <div className="active-filter-row" aria-label="Active recommendation filters">
+                <span>Active filters: {selectedRecommendationProviders.length > 0 ? selectedRecommendationProviders.join(', ') : 'All services'} · {recommendationMediaType === 'all' ? 'Movies + shows' : recommendationMediaType === 'movie' ? 'Movies only' : 'Shows only'}</span>
+                <button type="button" onClick={searchAllServices}>Search all services</button>
+                <button type="button" onClick={clearRecommendationFilters}>Clear filters</button>
+              </div>
               <div className="provider-filter-row" aria-label="Streaming service filters">
                 {RECOMMENDATION_PROVIDERS.map((provider) => (
                   <button
@@ -866,7 +970,13 @@ function App() {
               </div>
               <div className="recommendation-results">
                 {recommendationResults.length === 0 ? (
-                  <p className="chat-empty">No matches. Clear filters, browse TMDB, or try another search.</p>
+                  <div className="recommendation-empty-state">
+                    <p className="chat-empty">No matches for the active filters. Try all services, clear filters, browse TMDB, or search another title.</p>
+                    <div className="active-filter-row compact" aria-label="No-match recovery actions">
+                      <button type="button" onClick={searchAllServices}>Search all services</button>
+                      <button type="button" onClick={clearRecommendationFilters}>Clear filters</button>
+                    </div>
+                  </div>
                 ) : recommendationResults.map((item) => (
                   <article className="recommendation-card" key={item.sourceId}>
                     <div>
@@ -895,7 +1005,7 @@ function App() {
           <button
             className={`drawer-toggle ${showTvRemoteDrawer ? 'open' : ''}`}
             type="button"
-            onClick={() => setShowTvRemoteDrawer(!showTvRemoteDrawer)}
+            onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)}
             aria-expanded={showTvRemoteDrawer}
           >
             <span>TV Remote Mode</span>
@@ -1000,7 +1110,7 @@ function App() {
           <button
             className={`drawer-toggle ${showLaptopDrawer ? 'open' : ''}`}
             type="button"
-            onClick={() => setShowLaptopDrawer(!showLaptopDrawer)}
+            onClick={() => openLaptopAutoDrawer(!showLaptopDrawer)}
             aria-expanded={showLaptopDrawer}
           >
             <span>Laptop auto-sync</span>
