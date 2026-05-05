@@ -887,10 +887,56 @@ button:active {
 .recommendation-card {
   display: grid;
   gap: 9px;
-  padding: 12px;
+  padding: 10px;
   border-radius: 20px;
   background: rgba(255, 248, 231, 0.06);
   border: 1px solid rgba(255, 248, 231, 0.09);
+}
+
+.recommendation-card-body {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.recommendation-poster {
+  width: 74px;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(255, 248, 231, 0.13), rgba(230, 179, 124, 0.08));
+  border: 1px solid rgba(255, 248, 231, 0.11);
+  box-shadow: 0 14px 28px rgba(0,0,0,0.18);
+}
+
+.recommendation-poster img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.recommendation-poster.fallback {
+  display: grid;
+  place-items: center;
+  color: rgba(255, 248, 231, 0.72);
+  background:
+    radial-gradient(circle at 35% 25%, rgba(230, 179, 124, 0.28), transparent 45%),
+    linear-gradient(145deg, rgba(232, 132, 124, 0.16), rgba(255, 248, 231, 0.06));
+}
+
+.recommendation-poster.fallback span {
+  color: var(--gold);
+  font-size: 1.8rem;
+  font-weight: 820;
+  line-height: 1;
+}
+
+.recommendation-copy {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
 }
 
 .recommendation-card.shared {

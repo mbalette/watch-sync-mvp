@@ -30,8 +30,45 @@ import { buildRecommendationDiscoverApiUrl, buildRecommendationSearchApiUrl, fil
 
 const LOCAL_PARTICIPANT_KEY = 'watch-sync.localParticipant'
 const CURRENT_ROOM_KEY = 'watch-sync.currentRoom'
+const RECOMMENDATION_PROVIDERS_KEY = 'watch-sync.recommendationProviders'
 const storageKey = (roomId: string) => `watch-sync.room.${roomId}`
 const realtimeUrl = import.meta.env.VITE_REALTIME_URL || 'ws://127.0.0.1:8787'
+
+function loadRecommendationProviders(): string[] {
+  const raw = localStorage.getItem(RECOMMENDATION_PROVIDERS_KEY)
+  if (!raw) return []
+
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((provider): provider is string => typeof provider === 'string' && (RECOMMENDATION_PROVIDERS as readonly string[]).includes(provider))
+  } catch {
+    localStorage.removeItem(RECOMMENDATION_PROVIDERS_KEY)
+    return []
+  }
+}
+
+function persistRecommendationProviders(providers: string[]) {
+  if (providers.length === 0) {
+    localStorage.removeItem(RECOMMENDATION_PROVIDERS_KEY)
+    return
+  }
+  localStorage.setItem(RECOMMENDATION_PROVIDERS_KEY, JSON.stringify(providers))
+}
+
+function RecommendationPoster({ item }: { item: WatchRecommendation }) {
+  const initial = item.title.trim().charAt(0).toUpperCase() || '▶'
+
+  return (
+    <div className={`recommendation-poster ${item.posterUrl ? '' : 'fallback'}`} aria-hidden="true">
+      {item.posterUrl ? (
+        <img src={item.posterUrl} alt="" loading="lazy" />
+      ) : (
+        <span>{initial}</span>
+      )}
+    </div>
+  )
+}
 
 function loadRoom(roomId: string): RoomState | null {
   const raw = localStorage.getItem(storageKey(roomId))
@@ -89,7 +126,7 @@ function App() {
   const [showChat, setShowChat] = useState(false)
   const [chatDraft, setChatDraft] = useState('')
   const [recommendationQuery, setRecommendationQuery] = useState('')
-  const [selectedRecommendationProviders, setSelectedRecommendationProviders] = useState<string[]>([])
+  const [selectedRecommendationProviders, setSelectedRecommendationProviders] = useState<string[]>(loadRecommendationProviders)
   const [recommendationMediaType, setRecommendationMediaType] = useState<'all' | 'movie' | 'tv'>('all')
   const [recommendationCategory, setRecommendationCategory] = useState<'popular' | 'new' | 'recent'>('popular')
   const [liveRecommendationResults, setLiveRecommendationResults] = useState<WatchRecommendation[]>([])
@@ -418,6 +455,11 @@ function App() {
       : [...current, provider])
   }
 
+  function saveRecommendationServices() {
+    persistRecommendationProviders(selectedRecommendationProviders)
+    setRecommendationStatus('Services saved locally on this device.')
+  }
+
   async function browseLiveRecommendations() {
     setRecommendationStatus('Browsing TMDB provider catalog via the server token proxy...')
     try {
@@ -522,7 +564,8 @@ function App() {
 
   function clearRecommendationFilters() {
     setSelectedRecommendationProviders([])
-    setRecommendationStatus('Provider filters cleared. Browse TMDB or search again across all services.')
+    localStorage.removeItem(RECOMMENDATION_PROVIDERS_KEY)
+    setRecommendationStatus('Provider filters cleared and local service preferences removed. Browse TMDB or search again across all services.')
   }
 
   async function searchAllServices() {
@@ -889,14 +932,19 @@ function App() {
               const votes = getRecommendationVoteSummary(event.item.sourceId)
               return (
                 <article className="recommendation-card shared" key={`${event.at}-${event.actorId}-${event.item.sourceId}`}>
-                  <div>
-                    <strong>{event.item.title}{event.item.year ? ` (${event.item.year})` : ''}</strong>
-                    <span>Recommended by {room.participants[event.actorId]?.displayName ?? 'Partner'} · {event.item.providers.join(', ')}</span>
-                  </div>
-                  <p>{event.item.overview}</p>
-                  <div className="recommendation-meta">
-                    <span>{event.item.ratingLabel}: {event.item.ratingValue}</span>
-                    {event.item.externalUrl && <a href={event.item.externalUrl} target="_blank" rel="noreferrer">Details</a>}
+                  <div className="recommendation-card-body">
+                    <RecommendationPoster item={event.item} />
+                    <div className="recommendation-copy">
+                      <div>
+                        <strong>{event.item.title}{event.item.year ? ` (${event.item.year})` : ''}</strong>
+                        <span>Recommended by {room.participants[event.actorId]?.displayName ?? 'Partner'} · {event.item.providers.join(', ') || 'Any service'}</span>
+                      </div>
+                      <p>{event.item.overview}</p>
+                      <div className="recommendation-meta">
+                        <span>{event.item.ratingLabel}: {event.item.ratingValue}</span>
+                        {event.item.externalUrl && <a href={event.item.externalUrl} target="_blank" rel="noreferrer">Details</a>}
+                      </div>
+                    </div>
                   </div>
                   <div className="vote-row" aria-label={`Votes for ${event.item.title}`}>
                     <button type="button" onClick={() => voteRecommendation(event.item.sourceId, 'up')}>👍 {votes.up}</button>
@@ -954,6 +1002,7 @@ function App() {
               <div className="active-filter-row" aria-label="Active recommendation filters">
                 <span>Active filters: {selectedRecommendationProviders.length > 0 ? selectedRecommendationProviders.join(', ') : 'All services'} · {recommendationMediaType === 'all' ? 'Movies + shows' : recommendationMediaType === 'movie' ? 'Movies only' : 'Shows only'}</span>
                 <button type="button" onClick={searchAllServices}>Search all services</button>
+                <button type="button" onClick={saveRecommendationServices}>Save services</button>
                 <button type="button" onClick={clearRecommendationFilters}>Clear filters</button>
               </div>
               <div className="provider-filter-row" aria-label="Streaming service filters">
@@ -979,14 +1028,19 @@ function App() {
                   </div>
                 ) : recommendationResults.map((item) => (
                   <article className="recommendation-card" key={item.sourceId}>
-                    <div>
-                      <strong>{item.title}{item.year ? ` (${item.year})` : ''}</strong>
-                      <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'} · {item.providers.join(', ')}</span>
-                    </div>
-                    <p>{item.overview}</p>
-                    <div className="recommendation-meta">
-                      <span>{item.ratingLabel}: {item.ratingValue}</span>
-                      <button type="button" onClick={() => sendRecommendation(item.sourceId)}>Recommend</button>
+                    <div className="recommendation-card-body">
+                      <RecommendationPoster item={item} />
+                      <div className="recommendation-copy">
+                        <div>
+                          <strong>{item.title}{item.year ? ` (${item.year})` : ''}</strong>
+                          <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'} · {item.providers.join(', ') || 'Any service'}</span>
+                        </div>
+                        <p>{item.overview}</p>
+                        <div className="recommendation-meta">
+                          <span>{item.ratingLabel}: {item.ratingValue}</span>
+                          <button type="button" onClick={() => sendRecommendation(item.sourceId)}>Recommend</button>
+                        </div>
+                      </div>
                     </div>
                     <div className="vote-row" aria-label={`Actions for ${item.title}`}>
                       <button type="button" onClick={() => voteRecommendation(item.sourceId, 'up')}>👍 {getRecommendationVoteSummary(item.sourceId).up}</button>
