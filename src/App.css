@@ -900,6 +900,33 @@ button:active {
   align-items: center;
 }
 
+.recommendation-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.recommendation-tabs button {
+  min-height: 36px;
+  padding: 8px 7px;
+  border-radius: 13px;
+  font-size: 0.75rem;
+}
+
+.recommendation-tabs button.selected {
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+}
+
+.recommendation-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.recommendation-actions .source-pill {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
 .source-pill {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.18);

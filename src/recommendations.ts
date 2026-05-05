@@ -97,3 +97,22 @@ export function buildRecommendationSearchApiUrl(query: string, providers: string
   if (providers.length > 0) params.set('providers', providers.join(','))
   return `/api/recommendations/tmdb?${params.toString()}`
 }
+
+export function buildRecommendationDiscoverApiUrl({
+  providers,
+  mediaType,
+  category,
+  region = 'US',
+}: {
+  providers: string[]
+  mediaType: 'movie' | 'tv' | 'all'
+  category: 'popular' | 'new' | 'recent'
+  region?: string
+}): string {
+  const params = new URLSearchParams()
+  params.set('region', region.trim().toUpperCase() || 'US')
+  if (providers.length > 0) params.set('providers', providers.join(','))
+  params.set('mediaType', mediaType)
+  params.set('category', category)
+  return `/api/recommendations/discover?${params.toString()}`
+}

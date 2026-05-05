@@ -26,7 +26,7 @@ import {
   TV_PLATFORM_OPTIONS,
   type LinkedTvDevice,
 } from './tv-remote-device'
-import { buildRecommendationSearchApiUrl, filterRecommendations, RECOMMENDATION_PROVIDERS } from './recommendations'
+import { buildRecommendationDiscoverApiUrl, buildRecommendationSearchApiUrl, filterRecommendations, RECOMMENDATION_PROVIDERS } from './recommendations'
 
 const LOCAL_PARTICIPANT_KEY = 'watch-sync.localParticipant'
 const CURRENT_ROOM_KEY = 'watch-sync.currentRoom'
@@ -90,6 +90,8 @@ function App() {
   const [chatDraft, setChatDraft] = useState('')
   const [recommendationQuery, setRecommendationQuery] = useState('')
   const [selectedRecommendationProviders, setSelectedRecommendationProviders] = useState<string[]>([])
+  const [recommendationMediaType, setRecommendationMediaType] = useState<'all' | 'movie' | 'tv'>('all')
+  const [recommendationCategory, setRecommendationCategory] = useState<'popular' | 'new' | 'recent'>('popular')
   const [liveRecommendationResults, setLiveRecommendationResults] = useState<WatchRecommendation[]>([])
   const [recommendationStatus, setRecommendationStatus] = useState('Showing a safe mock catalog. Live TMDB search is optional once a server token is configured.')
   const [recommendationSource, setRecommendationSource] = useState<'mock' | 'tmdb'>('mock')
@@ -120,7 +122,7 @@ function App() {
   const recommendationMessages = room ? room.eventLog.filter((event) => event.type === 'recommendation_sent').slice(-10) : []
   const selectedWatchEvent = room ? room.eventLog.findLast((event) => event.type === 'recommendation_selected') : undefined
   const recommendationVoteEvents = room ? room.eventLog.filter((event) => event.type === 'recommendation_voted') : []
-  const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders)
+  const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders).filter((item) => recommendationMediaType === 'all' || item.mediaType === recommendationMediaType)
   const recommendationResults = recommendationSource === 'tmdb' ? liveRecommendationResults : mockRecommendationResults
   const pairedExtensions = room ? Object.values(room.extensions ?? {}) : []
   const localPlayback = room && currentParticipantId ? room.playbackByParticipant?.[currentParticipantId] : undefined
@@ -413,6 +415,34 @@ function App() {
     setSelectedRecommendationProviders((current) => current.includes(provider)
       ? current.filter((item) => item !== provider)
       : [...current, provider])
+  }
+
+  async function browseLiveRecommendations() {
+    setRecommendationStatus('Browsing TMDB provider catalog via the server token proxy...')
+    try {
+      const response = await fetch(buildRecommendationDiscoverApiUrl({
+        providers: selectedRecommendationProviders,
+        mediaType: recommendationMediaType,
+        category: recommendationCategory,
+        region: 'US',
+      }))
+      const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
+      if (!response.ok || payload.ok === false) {
+        setRecommendationSource('mock')
+        setLiveRecommendationResults([])
+        setRecommendationStatus(`${payload.error ?? `TMDB discover returned ${response.status}`} Showing mock catalog instead.`)
+        return
+      }
+      setLiveRecommendationResults(payload.items ?? [])
+      setRecommendationSource('tmdb')
+      setRecommendationStatus((payload.items?.length ?? 0) > 0
+        ? 'Showing provider-filtered TMDB browse results. Availability can vary by region, account plan, and date.'
+        : 'TMDB returned no provider-filtered titles for those filters. Try a different service or tab, or use mock cards.')
+    } catch (error) {
+      setRecommendationSource('mock')
+      setLiveRecommendationResults([])
+      setRecommendationStatus(error instanceof Error ? `${error.message}. Showing mock catalog instead.` : 'TMDB provider browsing failed. Showing mock catalog instead.')
+    }
   }
 
   async function searchLiveRecommendations() {
@@ -788,17 +818,35 @@ function App() {
             aria-expanded={showRecommendDrawer}
           >
             <span>Find next watch</span>
-            <small>{recommendationSource === 'tmdb' ? 'Live TMDB search' : 'Mock catalog + TMDB-ready'}</small>
+            <small>{recommendationSource === 'tmdb' ? 'Live TMDB browse/search' : 'Pick services + browse'}</small>
           </button>
 
           {showRecommendDrawer && (
             <div className="drawer-content recommend-panel">
-              <p>Search the starter catalog or try live TMDB search when the server token is configured. Filter by streaming platform, then send a recommendation card into the room chat. Rotten Tomatoes scores are licensed-only later.</p>
+              <p>Pick the services you have, browse popular or recent TMDB listings for those providers, or search a specific title. Then send a recommendation card into the room. Rotten Tomatoes scores are licensed-only later.</p>
+              <div className="recommendation-tabs" aria-label="Browse category">
+                {([
+                  ['popular', 'Popular'],
+                  ['new', 'New-ish'],
+                  ['recent', 'Recently aired'],
+                ] as const).map(([category, label]) => (
+                  <button key={category} className={recommendationCategory === category ? 'selected' : ''} type="button" onClick={() => setRecommendationCategory(category)}>{label}</button>
+                ))}
+              </div>
               <label className="field-label compact">
-                <span>Search</span>
-                <input value={recommendationQuery} onChange={(event) => setRecommendationQuery(event.target.value)} placeholder="Try sci-fi, comedy, action..." aria-label="Search watch recommendations" />
+                <span>Movies / shows</span>
+                <select value={recommendationMediaType} onChange={(event) => setRecommendationMediaType(event.target.value as 'all' | 'movie' | 'tv')} aria-label="Recommendation media type">
+                  <option value="all">Movies + shows</option>
+                  <option value="movie">Movies only</option>
+                  <option value="tv">Shows only</option>
+                </select>
+              </label>
+              <label className="field-label compact">
+                <span>Search title</span>
+                <input value={recommendationQuery} onChange={(event) => setRecommendationQuery(event.target.value)} placeholder="Try The Bear, Dune, comedy..." aria-label="Search watch recommendations" />
               </label>
               <div className="remote-button-row triple recommendation-actions">
+                <button type="button" onClick={browseLiveRecommendations}>Browse TMDB</button>
                 <button type="button" onClick={searchLiveRecommendations}>Search TMDB</button>
                 <button type="button" onClick={clearLiveRecommendations}>Use mock</button>
                 <span className={`source-pill ${recommendationSource}`}>{recommendationSource === 'tmdb' ? 'Live' : 'Mock'}</span>
@@ -818,7 +866,7 @@ function App() {
               </div>
               <div className="recommendation-results">
                 {recommendationResults.length === 0 ? (
-                  <p className="chat-empty">No demo matches. Clear filters or try another search.</p>
+                  <p className="chat-empty">No matches. Clear filters, browse TMDB, or try another search.</p>
                 ) : recommendationResults.map((item) => (
                   <article className="recommendation-card" key={item.sourceId}>
                     <div>

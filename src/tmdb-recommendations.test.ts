@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildTmdbDiscoverUrl,
   buildTmdbSearchUrl,
+  createTmdbDiscoverResponse,
   createTmdbRecommendationResponse,
   mapTmdbSearchItem,
   TMDB_PROVIDER_IDS,
@@ -29,6 +31,28 @@ describe('TMDB recommendation API helpers', () => {
       ratingLabel: 'TMDB',
       ratingValue: '8.2',
     })
+  })
+
+  it('builds discover URLs for provider-filtered movies and shows', () => {
+    const movieUrl = buildTmdbDiscoverUrl({ mediaType: 'movie', providers: ['Hulu', 'Max'], region: 'US', category: 'popular' })
+    expect(movieUrl.pathname).toBe('/3/discover/movie')
+    expect(movieUrl.searchParams.get('watch_region')).toBe('US')
+    expect(movieUrl.searchParams.get('with_watch_providers')).toBe('15|1899')
+    expect(movieUrl.searchParams.get('with_watch_monetization_types')).toBe('flatrate')
+    expect(movieUrl.searchParams.get('sort_by')).toBe('popularity.desc')
+
+    const tvUrl = buildTmdbDiscoverUrl({ mediaType: 'tv', providers: ['Disney+'], region: 'us', category: 'recent' })
+    expect(tvUrl.pathname).toBe('/3/discover/tv')
+    expect(tvUrl.searchParams.get('air_date.gte')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(tvUrl.searchParams.get('air_date.lte')).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+  })
+
+  it('returns explicit setup status for discover when no TMDB token is configured', async () => {
+    const response = await createTmdbDiscoverResponse({ providers: ['Hulu'], mediaType: 'all', category: 'popular', env: {} })
+    expect(response.status).toBe(501)
+    expect(response.body.ok).toBe(false)
+    expect(response.body.error).toContain('TMDB')
+    expect(response.body.fallback).toBe('mock')
   })
 
   it('returns explicit setup status when no TMDB token is configured', async () => {

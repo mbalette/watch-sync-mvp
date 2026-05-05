@@ -43,6 +43,19 @@ type TmdbWatchProviderResponse = {
   results?: Record<string, TmdbWatchProviderRegion>
 }
 
+export type TmdbDiscoverMediaType = 'movie' | 'tv' | 'all'
+export type TmdbDiscoverCategory = 'popular' | 'new' | 'recent'
+
+type TmdbDiscoverItem = Omit<TmdbSearchItem, 'media_type'>
+
+export type TmdbDiscoverRequest = {
+  providers?: string[]
+  region?: string
+  mediaType?: TmdbDiscoverMediaType
+  category?: TmdbDiscoverCategory
+  page?: number
+}
+
 export type TmdbRecommendationApiBody = {
   ok: boolean
   source: 'tmdb'
@@ -103,6 +116,7 @@ export function mapTmdbSearchItem(item: TmdbSearchItem, providers: string[] = []
     providers,
     ratingLabel: 'TMDB',
     ratingValue: ratingValue ?? 'n/a',
+    posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
     externalUrl: `https://www.themoviedb.org/${mediaType === 'movie' ? 'movie' : 'tv'}/${item.id}`,
   }
 }
@@ -142,6 +156,103 @@ async function fetchProvidersForItem(item: TmdbSearchItem, token: string, region
 function matchesSelectedProviders(itemProviders: string[], selectedProviders: string[]): boolean {
   if (selectedProviders.length === 0) return true
   return selectedProviders.some((provider) => itemProviders.includes(provider))
+}
+
+
+function isoDateDaysAgo(daysAgo: number): string {
+  const date = new Date()
+  date.setUTCDate(date.getUTCDate() - daysAgo)
+  return date.toISOString().slice(0, 10)
+}
+
+function normalizeDiscoverMediaType(mediaType: TmdbDiscoverMediaType | undefined): Exclude<TmdbDiscoverMediaType, 'all'> {
+  return mediaType === 'tv' ? 'tv' : 'movie'
+}
+
+function normalizeDiscoverCategory(category: TmdbDiscoverCategory | undefined): TmdbDiscoverCategory {
+  return category === 'new' || category === 'recent' ? category : 'popular'
+}
+
+function normalizePage(page: number | undefined): string {
+  return String(Math.min(Math.max(Math.floor(page ?? 1), 1), 10))
+}
+
+export function buildTmdbDiscoverUrl({ providers = [], region = 'US', mediaType = 'movie', category = 'popular', page = 1 }: TmdbDiscoverRequest): URL {
+  const normalizedMediaType = normalizeDiscoverMediaType(mediaType)
+  const normalizedCategory = normalizeDiscoverCategory(category)
+  const url = new URL(`/3/discover/${normalizedMediaType}`, TMDB_BASE_URL)
+  const watchRegion = normalizeRegion(region)
+  url.searchParams.set('watch_region', watchRegion)
+  url.searchParams.set('with_watch_monetization_types', 'flatrate')
+  url.searchParams.set('include_adult', 'false')
+  url.searchParams.set('language', 'en-US')
+  url.searchParams.set('page', normalizePage(page))
+  const ids = selectedProviderIds(providers)
+  if (ids.length > 0) url.searchParams.set('with_watch_providers', ids.join('|'))
+
+  if (normalizedCategory === 'new') {
+    url.searchParams.set('sort_by', normalizedMediaType === 'movie' ? 'primary_release_date.desc' : 'first_air_date.desc')
+    if (normalizedMediaType === 'movie') {
+      url.searchParams.set('primary_release_date.gte', isoDateDaysAgo(365))
+      url.searchParams.set('primary_release_date.lte', isoDateDaysAgo(0))
+    } else {
+      url.searchParams.set('first_air_date.gte', isoDateDaysAgo(365))
+      url.searchParams.set('first_air_date.lte', isoDateDaysAgo(0))
+    }
+  } else if (normalizedCategory === 'recent') {
+    url.searchParams.set('sort_by', normalizedMediaType === 'movie' ? 'primary_release_date.desc' : 'popularity.desc')
+    if (normalizedMediaType === 'movie') {
+      url.searchParams.set('primary_release_date.gte', isoDateDaysAgo(120))
+      url.searchParams.set('primary_release_date.lte', isoDateDaysAgo(0))
+    } else {
+      url.searchParams.set('air_date.gte', isoDateDaysAgo(45))
+      url.searchParams.set('air_date.lte', isoDateDaysAgo(0))
+    }
+  } else {
+    url.searchParams.set('sort_by', 'popularity.desc')
+  }
+
+  return url
+}
+
+function mapTmdbDiscoverItem(item: TmdbDiscoverItem, mediaType: 'movie' | 'tv', providers: string[] = []): WatchRecommendation | null {
+  return mapTmdbSearchItem({ ...item, media_type: mediaType }, providers)
+}
+
+export async function createTmdbDiscoverResponse({
+  providers = [],
+  region = 'US',
+  mediaType = 'all',
+  category = 'popular',
+  page = 1,
+  env,
+}: TmdbDiscoverRequest & { env: TmdbEnv }): Promise<TmdbRecommendationApiResponse> {
+  const token = env.TMDB_READ_ACCESS_TOKEN ?? env.TMDB_API_TOKEN
+  if (!token) {
+    return {
+      status: 501,
+      body: {
+        ok: false,
+        source: 'tmdb',
+        error: 'TMDB discover is not configured. Add TMDB_READ_ACCESS_TOKEN to enable provider-filtered browsing.',
+        fallback: 'mock',
+        attribution: TMDB_ATTRIBUTION,
+      },
+    }
+  }
+  const mediaTypes: Array<'movie' | 'tv'> = mediaType === 'movie' || mediaType === 'tv' ? [mediaType] : ['movie', 'tv']
+  const items: WatchRecommendation[] = []
+  for (const kind of mediaTypes) {
+    const payload = await fetchTmdbJson(buildTmdbDiscoverUrl({ providers, region, mediaType: kind, category, page }), token) as { results?: TmdbDiscoverItem[] }
+    for (const candidate of (payload.results ?? []).slice(0, mediaTypes.length === 1 ? 16 : 8)) {
+      const item = mapTmdbDiscoverItem(candidate, kind, providers)
+      if (item) items.push(item)
+    }
+  }
+  return {
+    status: 200,
+    body: { ok: true, source: 'tmdb', items: items.slice(0, 16), attribution: TMDB_ATTRIBUTION },
+  }
 }
 
 export async function createTmdbRecommendationResponse({

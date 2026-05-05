@@ -245,12 +245,15 @@ Android TV / Google TV / Fire TV:
 - Apple TV: manual-only until a public App-Store-safe path is proven.
 
 
-### TMDB live recommendation search
+### TMDB live recommendation browse/search
 
 - `src/recommendations.ts` contains a local/mock starter catalog and provider filters for Netflix, Prime Video, Disney+, Paramount+, Max, and Hulu.
-- `src/tmdb-recommendations.ts` contains the TMDB mapping/proxy helper. `functions/api/recommendations/tmdb.ts` exposes `GET /api/recommendations/tmdb?q=<query>&region=US&providers=Max,Hulu` when a server-side `TMDB_READ_ACCESS_TOKEN`/`TMDB_API_TOKEN` is configured.
-- If no TMDB token is configured, the endpoint returns a setup error with `fallback: "mock"`; the PWA keeps showing safe mock cards.
-- Live TMDB search uses bearer auth server-side only. Do not put the token in the browser bundle.
+- `src/tmdb-recommendations.ts` contains the TMDB mapping/proxy helper for both title search and provider-filtered Discover.
+- `functions/api/recommendations/tmdb.ts` exposes `GET /api/recommendations/tmdb?q=<query>&region=US&providers=Max,Hulu` for title search when a server-side `TMDB_READ_ACCESS_TOKEN`/`TMDB_API_TOKEN` is configured.
+- `functions/api/recommendations/discover.ts` exposes `GET /api/recommendations/discover?region=US&providers=Hulu,Max&mediaType=all&category=popular` for the JustWatch-like free browse path. It uses TMDB Discover with `watch_region`, `with_watch_providers`, `with_watch_monetization_types=flatrate`, and movie/show category filters.
+- Browse categories are intentionally truthful: `popular`, `new-ish`, and `recently aired`. TMDB does not provide exact provider added dates, so do not call this “new on Hulu today.”
+- If no TMDB token is configured, both endpoints return a setup error with `fallback: "mock"`; the PWA keeps showing safe mock cards.
+- Live TMDB search/browse uses bearer auth server-side only. Do not put the token in the browser bundle.
 - TMDB provider availability is region/account/date dependent. The UI labels TMDB as an optional live source and keeps mock results available.
 - `Recommend` posts a `recommendation_sent` room event so the other participant sees a shared recommendation card in the room.
 - Optional external ratings can be added later through a licensed/allowed source such as OMDb if acceptable.
