@@ -3,12 +3,15 @@ import './App.css'
 import {
   applyRoomEvent,
   bothReady,
+  buildRecommendationQueue,
   createParticipant,
   createRoom,
   normalizeRoomCode,
   nowIso,
   participantList,
+  recommendationQueueKey,
   type Participant,
+  type RecommendationQueueItem,
   type RoomEvent,
   type RoomState,
   type WatchRecommendation,
@@ -157,8 +160,9 @@ function App() {
   const isSoloRoom = people.length === 1
   const chatMessages = room ? room.eventLog.filter((event) => event.type === 'chat_message').slice(-20) : []
   const recommendationMessages = room ? room.eventLog.filter((event) => event.type === 'recommendation_sent').slice(-10) : []
+  const recommendationQueue = room ? buildRecommendationQueue(room.eventLog) : []
+  const queuedRecommendationKeys = new Set(recommendationQueue.map((item) => item.key))
   const selectedWatchEvent = room ? room.eventLog.findLast((event) => event.type === 'recommendation_selected') : undefined
-  const recommendationVoteEvents = room ? room.eventLog.filter((event) => event.type === 'recommendation_voted') : []
   const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders, { mediaType: recommendationMediaType, category: recommendationCategory })
   const recommendationResults = recommendationSource === 'tmdb' ? liveRecommendationResults : mockRecommendationResults
   const pairedExtensions = room ? Object.values(room.extensions ?? {}) : []
@@ -622,21 +626,19 @@ function App() {
     }
   }
 
-  function findRecommendationItem(sourceId: string): WatchRecommendation | undefined {
-    return recommendationResults.find((candidate) => candidate.sourceId === sourceId)
-      ?? recommendationMessages.find((event) => event.item.sourceId === sourceId)?.item
-      ?? (selectedWatchEvent?.item.sourceId === sourceId ? selectedWatchEvent.item : undefined)
+  function findRecommendationItem(sourceIdOrQueueKey: string): WatchRecommendation | undefined {
+    return recommendationResults.find((candidate) => candidate.sourceId === sourceIdOrQueueKey || recommendationQueueKey(candidate) === sourceIdOrQueueKey)
+      ?? recommendationQueue.find((queueItem) => queueItem.key === sourceIdOrQueueKey || queueItem.item.sourceId === sourceIdOrQueueKey)?.item
+      ?? recommendationMessages.find((event) => event.item.sourceId === sourceIdOrQueueKey)?.item
+      ?? (selectedWatchEvent?.item.sourceId === sourceIdOrQueueKey || (selectedWatchEvent && recommendationQueueKey(selectedWatchEvent.item) === sourceIdOrQueueKey) ? selectedWatchEvent.item : undefined)
   }
 
-  function getRecommendationVoteSummary(sourceId: string) {
-    const latestVotesByActor = new Map<string, 'up' | 'down'>()
-    for (const event of recommendationVoteEvents) {
-      if (event.sourceId === sourceId) latestVotesByActor.set(event.actorId, event.vote)
-    }
-    const votes = Array.from(latestVotesByActor.values())
+  function getRecommendationVoteSummary(sourceIdOrQueueKey: string) {
+    const queueItem = recommendationQueue.find((candidate) => candidate.key === sourceIdOrQueueKey || candidate.item.sourceId === sourceIdOrQueueKey)
     return {
-      up: votes.filter((vote) => vote === 'up').length,
-      down: votes.filter((vote) => vote === 'down').length,
+      up: queueItem?.upVotes ?? 0,
+      down: queueItem?.downVotes ?? 0,
+      current: currentParticipantId && queueItem ? queueItem.votesByParticipant[currentParticipantId] : undefined,
     }
   }
 
@@ -644,8 +646,13 @@ function App() {
     if (!room || !currentParticipantId) return
     const item = findRecommendationItem(sourceId)
     if (!item) return
+    if (queuedRecommendationKeys.has(recommendationQueueKey(item))) {
+      setCopyStatus(`${item.title} is already in Tonight's queue.`)
+      setTimeout(() => setCopyStatus(''), 2200)
+      return
+    }
     dispatch({ type: 'recommendation_sent', actorId: currentParticipantId, item, at: nowIso() })
-    setCopyStatus(`Recommended ${item.title} to the room.`)
+    setCopyStatus(`Added ${item.title} to Tonight's queue.`)
     setTimeout(() => setCopyStatus(''), 2200)
   }
 
@@ -702,6 +709,20 @@ function App() {
     if (room.countdownState.phase === 'counting') return 'active'
     if (room.countdownState.phase === 'play') return 'play'
     return ''
+  }
+
+  function recommendationSubtitle(item: WatchRecommendation) {
+    const mediaLabel = item.mediaType === 'tv' ? 'Series' : 'Movie'
+    return [item.year, mediaLabel, item.providers.join(', ') || 'Any service'].filter(Boolean).join(' · ')
+  }
+
+  function queueRecommenderLabel(queueItem: RecommendationQueueItem) {
+    if (!room) return 'Added by Partner'
+    const firstName = room.participants[queueItem.firstRecommendedBy]?.displayName ?? 'Partner'
+    const latestName = room.participants[queueItem.latestRecommendedBy]?.displayName ?? 'Partner'
+    return queueItem.recommendCount > 1
+      ? `First added by ${firstName}; latest by ${latestName}`
+      : `Added by ${firstName}`
   }
 
   // Landing / Welcome Screen
@@ -922,40 +943,50 @@ function App() {
           <section className="tonight-card" aria-label="Tonight's selected watch">
             <span className="eyebrow">Tonight</span>
             <strong>{selectedWatchEvent.item.title}{selectedWatchEvent.item.year ? ` (${selectedWatchEvent.item.year})` : ''}</strong>
-            <p>{selectedWatchEvent.item.providers.join(', ') || 'Open it manually on your TV'} · pause at 00:00, then both tap ready.</p>
+            <p>Open this title in your own streaming app, pause at the sync point, then use manual countdown or TV Remote Mode to start together.</p>
           </section>
         )}
 
-        {recommendationMessages.length > 0 && (
-          <div className="recommendation-feed" aria-label="Room recommendations">
-            {recommendationMessages.map((event) => {
-              const votes = getRecommendationVoteSummary(event.item.sourceId)
-              return (
-                <article className="recommendation-card shared" key={`${event.at}-${event.actorId}-${event.item.sourceId}`}>
-                  <div className="recommendation-card-body">
-                    <RecommendationPoster item={event.item} />
-                    <div className="recommendation-copy">
-                      <div>
-                        <strong>{event.item.title}{event.item.year ? ` (${event.item.year})` : ''}</strong>
-                        <span>Recommended by {room.participants[event.actorId]?.displayName ?? 'Partner'} · {event.item.providers.join(', ') || 'Any service'}</span>
-                      </div>
-                      <p>{event.item.overview}</p>
-                      <div className="recommendation-meta">
-                        <span>{event.item.ratingLabel}: {event.item.ratingValue}</span>
-                        {event.item.externalUrl && <a href={event.item.externalUrl} target="_blank" rel="noreferrer">Details</a>}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="vote-row" aria-label={`Votes for ${event.item.title}`}>
-                    <button type="button" onClick={() => voteRecommendation(event.item.sourceId, 'up')}>👍 {votes.up}</button>
-                    <button type="button" onClick={() => voteRecommendation(event.item.sourceId, 'down')}>👎 {votes.down}</button>
-                    <button type="button" onClick={() => selectRecommendation(event.item.sourceId)}>Set tonight</button>
-                  </div>
-                </article>
-              )
-            })}
+        <section className="recommendation-feed queue-section" aria-label="Tonight's queue">
+          <div className="queue-header">
+            <div>
+              <p className="eyebrow">Room picks</p>
+              <h2>Tonight's queue</h2>
+            </div>
+            <span>{recommendationQueue.length} queued</span>
           </div>
-        )}
+          {recommendationQueue.length === 0 ? (
+            <p className="queue-empty">Search by your services, add a few picks, then let the room vote on what to watch tonight.</p>
+          ) : recommendationQueue.map((queueItem) => {
+            const votes = getRecommendationVoteSummary(queueItem.key)
+            return (
+              <article className={`recommendation-card queue-card ${queueItem.selected ? 'selected' : ''}`} key={queueItem.key}>
+                <div className="recommendation-card-body">
+                  <RecommendationPoster item={queueItem.item} />
+                  <div className="recommendation-copy">
+                    <div>
+                      <strong>{queueItem.item.title}{queueItem.item.year ? ` (${queueItem.item.year})` : ''}</strong>
+                      <span>{recommendationSubtitle(queueItem.item)}</span>
+                      <span>{queueRecommenderLabel(queueItem)} · {queueItem.recommendCount} add{queueItem.recommendCount === 1 ? '' : 's'}</span>
+                    </div>
+                    <p>{queueItem.item.overview}</p>
+                    <div className="recommendation-meta">
+                      <span>{queueItem.item.ratingLabel && queueItem.item.ratingValue ? `${queueItem.item.ratingLabel}: ${queueItem.item.ratingValue}` : 'Rating unavailable'}</span>
+                      {queueItem.item.externalUrl && <a href={queueItem.item.externalUrl} target="_blank" rel="noreferrer">Details</a>}
+                    </div>
+                    {queueItem.selected && <span className="selected-badge">Set for tonight</span>}
+                  </div>
+                </div>
+                <div className="vote-row" aria-label={`Votes for ${queueItem.item.title}`}>
+                  <button className={votes.current === 'up' ? 'current-vote' : ''} type="button" onClick={() => voteRecommendation(queueItem.key, 'up')} aria-pressed={votes.current === 'up'}>👍 {votes.up}</button>
+                  <button className={votes.current === 'down' ? 'current-vote' : ''} type="button" onClick={() => voteRecommendation(queueItem.key, 'down')} aria-pressed={votes.current === 'down'}>👎 {votes.down}</button>
+                  <button type="button" onClick={() => selectRecommendation(queueItem.key)}>{queueItem.selected ? 'Selected' : 'Set tonight'}</button>
+                </div>
+                <p className="set-tonight-helper">Sets the room's title and clears ready/countdown state so everyone can open the same show and sync from the start.</p>
+              </article>
+            )
+          })}
+        </section>
 
         <div className="recommend-drawer">
           <button
@@ -1026,29 +1057,27 @@ function App() {
                       <button type="button" onClick={clearRecommendationFilters}>Clear filters</button>
                     </div>
                   </div>
-                ) : recommendationResults.map((item) => (
-                  <article className="recommendation-card" key={item.sourceId}>
-                    <div className="recommendation-card-body">
-                      <RecommendationPoster item={item} />
-                      <div className="recommendation-copy">
-                        <div>
-                          <strong>{item.title}{item.year ? ` (${item.year})` : ''}</strong>
-                          <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'} · {item.providers.join(', ') || 'Any service'}</span>
-                        </div>
-                        <p>{item.overview}</p>
-                        <div className="recommendation-meta">
-                          <span>{item.ratingLabel}: {item.ratingValue}</span>
-                          <button type="button" onClick={() => sendRecommendation(item.sourceId)}>Recommend</button>
+                ) : recommendationResults.map((item) => {
+                  const queued = queuedRecommendationKeys.has(recommendationQueueKey(item))
+                  return (
+                    <article className={`recommendation-card ${queued ? 'queued' : ''}`} key={item.sourceId}>
+                      <div className="recommendation-card-body">
+                        <RecommendationPoster item={item} />
+                        <div className="recommendation-copy">
+                          <div>
+                            <strong>{item.title}{item.year ? ` (${item.year})` : ''}</strong>
+                            <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'} · {item.providers.join(', ') || 'Any service'}</span>
+                          </div>
+                          <p>{item.overview}</p>
+                          <div className="recommendation-meta">
+                            <span>{item.ratingLabel && item.ratingValue ? `${item.ratingLabel}: ${item.ratingValue}` : 'Rating unavailable'}</span>
+                            <button type="button" onClick={() => sendRecommendation(item.sourceId)} disabled={queued}>{queued ? 'In queue' : 'Add to queue'}</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="vote-row" aria-label={`Actions for ${item.title}`}>
-                      <button type="button" onClick={() => voteRecommendation(item.sourceId, 'up')}>👍 {getRecommendationVoteSummary(item.sourceId).up}</button>
-                      <button type="button" onClick={() => voteRecommendation(item.sourceId, 'down')}>👎 {getRecommendationVoteSummary(item.sourceId).down}</button>
-                      <button type="button" onClick={() => selectRecommendation(item.sourceId)}>Set tonight</button>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  )
+                })}
               </div>
               <p className="mode-caveat">This product uses the TMDB API but is not endorsed or certified by TMDB. Do not scrape Rotten Tomatoes or JustWatch.</p>
             </div>

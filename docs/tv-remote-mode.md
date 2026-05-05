@@ -130,14 +130,18 @@ Accessed 2026-05-05:
 
 
 
-## Find next watch / recommendation cards
+## Find next watch / Tonight's queue
 
-The PWA now includes a Phase 1 recommendation drawer:
+The PWA now includes a Phase 1 recommendation drawer and visible room queue:
 
-- `Find watch` action opens a searchable mock catalog.
-- Filters include Netflix, Prime Video, Disney+, Paramount+, Max, and Hulu.
-- Result cards show title, year, movie/series, providers, brief description, and safe demo rating label.
-- `Recommend` posts a `recommendation_sent` room event so the other participant sees a shared recommendation card in the room.
+- `Find watch` opens service filters, TMDB browse/search, and a safe mock catalog fallback.
+- Filters include Netflix, Prime Video, Disney+, Paramount+, Max, Hulu, Peacock, and Apple TV+.
+- Result cards show poster/fallback art, title, year, movie/series type, providers, overview, and rating label when available.
+- `Add to queue` posts a `recommendation_sent` room event; duplicate cards are disabled/marked as already queued.
+- `Tonight's queue` is always visible in the room, including the empty state: “Search by your services, add a few picks, then let the room vote on what to watch tonight.”
+- Queue derivation is deterministic: dedupe by source/media id where possible and by normalized title/year/providers for mock/local cards.
+- Vote totals are derived client-side from the latest `recommendation_voted` event per participant, so a participant can change their yes/no vote.
+- `Set tonight` posts `recommendation_selected`, updates the room title/service, resets ready/countdown state, and reminds everyone to open the selected title in their own streaming app before using manual countdown or TV Remote Mode.
 - This phase intentionally does **not** scrape Rotten Tomatoes or JustWatch.
 
 Production data plan:
@@ -255,7 +259,7 @@ Android TV / Google TV / Fire TV:
 - If no TMDB token is configured, both endpoints return a setup error with `fallback: "mock"`; the PWA keeps showing safe mock cards.
 - Live TMDB search/browse uses bearer auth server-side only. Do not put the token in the browser bundle.
 - TMDB provider availability is region/account/date dependent. The UI labels TMDB as an optional live source and keeps mock results available.
-- `Recommend` posts a `recommendation_sent` room event so the other participant sees a shared recommendation card in the room.
+- `Add to queue` posts a `recommendation_sent` room event into the deduped `Tonight's queue`.
 - Optional external ratings can be added later through a licensed/allowed source such as OMDb if acceptable.
 - Do not scrape Rotten Tomatoes or JustWatch. Rotten Tomatoes scores require licensing/allowed sources; JustWatch provider data should not be harvested unofficially.
 - Attribution copy: “This product uses the TMDB API but is not endorsed or certified by TMDB.”

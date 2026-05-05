@@ -6,7 +6,10 @@ import {
   createRoom,
   isRoomEvent,
   nowIso,
+  buildRecommendationQueue,
+  recommendationQueueKey,
   type RoomEvent,
+  type WatchRecommendation,
 } from './domain'
 
 describe('room reducer/event model', () => {
@@ -161,6 +164,123 @@ describe('room reducer/event model', () => {
     expect(selected.readyState[guest.id]).toBe('idle')
     expect(selected.countdownState.phase).toBe('idle')
     expect(selected.lastSignal?.message).toContain("Tonight's watch: Slow Horses")
+  })
+
+  it('builds a deduped recommendation queue with recommender metadata and stable ranking', () => {
+    const arrivalTmdb: WatchRecommendation = {
+      source: 'tmdb',
+      sourceId: 'movie:329865',
+      mediaType: 'movie',
+      title: 'Arrival',
+      year: '2016',
+      overview: 'A thoughtful sci-fi drama for a synchronized movie night.',
+      providers: ['Netflix'],
+      ratingLabel: 'TMDB',
+      ratingValue: '7.6',
+    }
+    const arrivalDuplicate: WatchRecommendation = { ...arrivalTmdb, providers: ['Prime Video'] }
+    const mockArrival: WatchRecommendation = { ...arrivalTmdb, source: 'mock', sourceId: 'mock_arrival', providers: ['Hulu'] }
+    const mockArrivalDuplicate: WatchRecommendation = { ...mockArrival, sourceId: 'local_arrival' }
+    const bear: WatchRecommendation = {
+      source: 'mock',
+      sourceId: 'mock_bear',
+      mediaType: 'tv',
+      title: 'The Bear',
+      year: '2022',
+      overview: 'Kitchen intensity for the room.',
+      providers: ['Hulu'],
+      ratingLabel: 'TMDB',
+      ratingValue: '8.2',
+    }
+
+    const queue = buildRecommendationQueue([
+      { type: 'recommendation_sent', actorId: 'person_host', item: arrivalTmdb, at: '2026-01-01T00:00:00.000Z' },
+      { type: 'recommendation_sent', actorId: 'person_guest', item: bear, at: '2026-01-01T00:01:00.000Z' },
+      { type: 'recommendation_sent', actorId: 'person_guest', item: arrivalDuplicate, at: '2026-01-01T00:02:00.000Z' },
+      { type: 'recommendation_sent', actorId: 'person_other', item: mockArrival, at: '2026-01-01T00:03:00.000Z' },
+      { type: 'recommendation_sent', actorId: 'person_guest', item: mockArrivalDuplicate, at: '2026-01-01T00:04:00.000Z' },
+    ])
+
+    expect(queue).toHaveLength(3)
+    expect(queue[0].item.title).toBe('Arrival')
+    expect(queue[0].recommendCount).toBe(2)
+    expect(queue[0].firstRecommendedBy).toBe('person_host')
+    expect(queue[0].latestRecommendedBy).toBe('person_guest')
+    expect(queue[0].recommendedBy).toEqual(['person_host', 'person_guest'])
+    expect(queue[0].item.providers).toEqual(['Prime Video'])
+    expect(queue[1].recommendCount).toBe(2)
+    expect(recommendationQueueKey(mockArrivalDuplicate)).toBe(recommendationQueueKey(mockArrival))
+  })
+
+  it('tracks latest participant votes and ranks by score/up/down/recommend count/time/title', () => {
+    const arrival: WatchRecommendation = {
+      source: 'tmdb',
+      sourceId: 'movie:329865',
+      mediaType: 'movie',
+      title: 'Arrival',
+      year: '2016',
+      overview: 'A thoughtful sci-fi drama for a synchronized movie night.',
+      providers: ['Netflix'],
+    }
+    const bear: WatchRecommendation = {
+      source: 'mock',
+      sourceId: 'mock_bear',
+      mediaType: 'tv',
+      title: 'The Bear',
+      year: '2022',
+      overview: 'Kitchen intensity for the room.',
+      providers: ['Hulu'],
+    }
+
+    const queue = buildRecommendationQueue([
+      { type: 'recommendation_sent', actorId: 'host', item: arrival, at: '2026-01-01T00:00:00.000Z' },
+      { type: 'recommendation_sent', actorId: 'guest', item: bear, at: '2026-01-01T00:01:00.000Z' },
+      { type: 'recommendation_voted', actorId: 'host', sourceId: 'movie:329865', vote: 'down', at: '2026-01-01T00:02:00.000Z' },
+      { type: 'recommendation_voted', actorId: 'host', sourceId: 'movie:329865', vote: 'up', at: '2026-01-01T00:03:00.000Z' },
+      { type: 'recommendation_voted', actorId: 'guest', sourceId: 'movie:329865', vote: 'up', at: '2026-01-01T00:04:00.000Z' },
+      { type: 'recommendation_voted', actorId: 'host', sourceId: 'mock_bear', vote: 'up', at: '2026-01-01T00:05:00.000Z' },
+      { type: 'recommendation_voted', actorId: 'guest', sourceId: 'mock_bear', vote: 'down', at: '2026-01-01T00:06:00.000Z' },
+    ])
+
+    expect(queue.map((item) => item.item.title)).toEqual(['Arrival', 'The Bear'])
+    expect(queue[0]).toMatchObject({ upVotes: 2, downVotes: 0, score: 2 })
+    expect(queue[0].votesByParticipant).toEqual({ host: 'up', guest: 'up' })
+    expect(queue[1]).toMatchObject({ upVotes: 1, downVotes: 1, score: 0 })
+    expect(queue[1].votesByParticipant).toEqual({ host: 'up', guest: 'down' })
+  })
+
+  it('marks the latest selected queue title and selected recommendation resets setup state', () => {
+    const host = createParticipant('Host', 'host')
+    const guest = createParticipant('Guest', 'guest')
+    const joined = applyRoomEvent(createRoom(host), { type: 'participant_joined', participant: guest, at: nowIso() })
+    const ready = applyRoomEvent(
+      applyRoomEvent(joined, { type: 'participant_ready', participantId: host.id, ready: true, at: nowIso() }),
+      { type: 'participant_ready', participantId: guest.id, ready: true, at: nowIso() },
+    )
+    const counting = applyRoomEvent(ready, { type: 'countdown_started', actorId: host.id, startsAtEpochMs: Date.now(), durationSeconds: 3, at: nowIso() })
+    const item: WatchRecommendation = {
+      source: 'mock',
+      sourceId: 'mock_slow_horses',
+      mediaType: 'tv',
+      title: 'Slow Horses',
+      year: '2022',
+      overview: 'Spy series pick for tonight.',
+      providers: ['Apple TV+'],
+    }
+    const selected = applyRoomEvent(counting, { type: 'recommendation_selected', actorId: host.id, item, at: '2026-01-01T00:02:00.000Z' })
+    const queue = buildRecommendationQueue([
+      { type: 'recommendation_sent', actorId: guest.id, item, at: '2026-01-01T00:01:00.000Z' },
+      { type: 'recommendation_selected', actorId: host.id, item, at: '2026-01-01T00:02:00.000Z' },
+    ])
+
+    expect(queue[0].selected).toBe(true)
+    expect(queue[0].selectedAt).toBe('2026-01-01T00:02:00.000Z')
+    expect(selected.title).toBe('Slow Horses')
+    expect(selected.service).toBe('Apple TV+')
+    expect(selected.targetTimestamp).toBe('00:00')
+    expect(selected.readyState[host.id]).toBe('idle')
+    expect(selected.readyState[guest.id]).toBe('idle')
+    expect(selected.countdownState.phase).toBe('idle')
   })
 
   it('stores extension pairing, playback status, and errors without accepting malformed extension events', () => {

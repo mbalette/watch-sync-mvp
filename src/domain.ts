@@ -56,6 +56,26 @@ export interface WatchRecommendation {
   externalUrl?: string
 }
 
+export type RecommendationVote = 'up' | 'down'
+
+export interface RecommendationQueueItem {
+  key: string
+  item: WatchRecommendation
+  firstRecommendedAt: string
+  latestRecommendedAt: string
+  firstRecommendedBy: string
+  latestRecommendedBy: string
+  recommendedBy: string[]
+  recommendCount: number
+  votesByParticipant: Record<string, RecommendationVote>
+  upVotes: number
+  downVotes: number
+  score: number
+  selected: boolean
+  selectedAt?: string
+  selectedBy?: string
+}
+
 export interface PlaybackStatus {
   extensionId: string
   participantId: string
@@ -129,6 +149,119 @@ export const DEFAULT_SETUP: WatchSetup = {
 
 export function nowIso(): string {
   return new Date().toISOString()
+}
+
+export function recommendationQueueKey(item: WatchRecommendation): string {
+  const sourceId = item.sourceId.trim().toLowerCase()
+  const mediaType = item.mediaType
+  if (item.source !== 'mock' && sourceId) {
+    const idWithoutMediaPrefix = sourceId.replace(/^(movie|tv)[:_/-]/, '')
+    return `${item.source}:${mediaType}:${idWithoutMediaPrefix}`
+  }
+
+  return `local:${mediaType}:${normalizeRecommendationTitle(item.title)}:${normalizeRecommendationYear(item.year)}:${normalizeRecommendationProviders(item.providers)}`
+}
+
+export function buildRecommendationQueue(events: RoomEvent[]): RecommendationQueueItem[] {
+  const queueByKey = new Map<string, RecommendationQueueItem>()
+  const keyBySourceId = new Map<string, string>()
+
+  for (const event of events) {
+    if (event.type !== 'recommendation_sent') continue
+    const key = recommendationQueueKey(event.item)
+    keyBySourceId.set(event.item.sourceId, key)
+    const existing = queueByKey.get(key)
+    if (!existing) {
+      queueByKey.set(key, {
+        key,
+        item: event.item,
+        firstRecommendedAt: event.at,
+        latestRecommendedAt: event.at,
+        firstRecommendedBy: event.actorId,
+        latestRecommendedBy: event.actorId,
+        recommendedBy: [event.actorId],
+        recommendCount: 1,
+        votesByParticipant: {},
+        upVotes: 0,
+        downVotes: 0,
+        score: 0,
+        selected: false,
+      })
+      continue
+    }
+
+    queueByKey.set(key, {
+      ...existing,
+      item: event.item,
+      latestRecommendedAt: event.at,
+      latestRecommendedBy: event.actorId,
+      recommendedBy: existing.recommendedBy.includes(event.actorId) ? existing.recommendedBy : [...existing.recommendedBy, event.actorId],
+      recommendCount: existing.recommendCount + 1,
+    })
+  }
+
+  let selectedKey = ''
+  let selectedAt = ''
+  let selectedBy = ''
+  for (const event of events) {
+    if (event.type === 'recommendation_sent') {
+      keyBySourceId.set(event.item.sourceId, recommendationQueueKey(event.item))
+      continue
+    }
+
+    if (event.type === 'recommendation_voted') {
+      const key = keyBySourceId.get(event.sourceId) ?? event.sourceId
+      const existing = queueByKey.get(key)
+      if (!existing) continue
+      queueByKey.set(key, {
+        ...existing,
+        votesByParticipant: { ...existing.votesByParticipant, [event.actorId]: event.vote },
+      })
+      continue
+    }
+
+    if (event.type === 'recommendation_selected') {
+      const key = recommendationQueueKey(event.item)
+      keyBySourceId.set(event.item.sourceId, key)
+      selectedKey = key
+      selectedAt = event.at
+      selectedBy = event.actorId
+      if (!queueByKey.has(key)) {
+        queueByKey.set(key, {
+          key,
+          item: event.item,
+          firstRecommendedAt: event.at,
+          latestRecommendedAt: event.at,
+          firstRecommendedBy: event.actorId,
+          latestRecommendedBy: event.actorId,
+          recommendedBy: [event.actorId],
+          recommendCount: 0,
+          votesByParticipant: {},
+          upVotes: 0,
+          downVotes: 0,
+          score: 0,
+          selected: false,
+        })
+      }
+    }
+  }
+
+  return Array.from(queueByKey.values())
+    .map((entry) => {
+      const votes = Object.values(entry.votesByParticipant)
+      const upVotes = votes.filter((vote) => vote === 'up').length
+      const downVotes = votes.filter((vote) => vote === 'down').length
+      return {
+        ...entry,
+        upVotes,
+        downVotes,
+        score: upVotes - downVotes,
+        selected: entry.key === selectedKey,
+        selectedAt: entry.key === selectedKey ? selectedAt : undefined,
+        selectedBy: entry.key === selectedKey ? selectedBy : undefined,
+      }
+    })
+    .sort(compareRecommendationQueueItems)
 }
 
 export function makeId(prefix: string): string {
@@ -260,6 +393,28 @@ function isWatchSetup(value: unknown): value is WatchSetup {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
+}
+
+function compareRecommendationQueueItems(a: RecommendationQueueItem, b: RecommendationQueueItem): number {
+  return (b.score - a.score)
+    || (b.upVotes - a.upVotes)
+    || (a.downVotes - b.downVotes)
+    || (b.recommendCount - a.recommendCount)
+    || a.firstRecommendedAt.localeCompare(b.firstRecommendedAt)
+    || a.item.title.localeCompare(b.item.title)
+}
+
+function normalizeRecommendationTitle(title: string): string {
+  return title.trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+}
+
+function normalizeRecommendationYear(year: string | undefined): string {
+  const match = year?.match(/\d{4}/)
+  return match?.[0] ?? ''
+}
+
+function normalizeRecommendationProviders(providers: string[]): string {
+  return providers.map((provider) => provider.trim().toLowerCase()).filter(Boolean).sort().join(',')
 }
 
 function hasActor(value: Record<string, unknown>): value is Record<string, unknown> & { actorId: string } {

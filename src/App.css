@@ -939,9 +939,19 @@ button:active {
   gap: 7px;
 }
 
-.recommendation-card.shared {
+.recommendation-card.shared,
+.recommendation-card.queue-card {
   background: rgba(230, 179, 124, 0.08);
   border-color: rgba(230, 179, 124, 0.16);
+}
+
+.recommendation-card.queue-card.selected {
+  border-color: rgba(132, 231, 165, 0.42);
+  box-shadow: inset 0 0 0 1px rgba(132, 231, 165, 0.12);
+}
+
+.recommendation-card.queued {
+  opacity: 0.78;
 }
 
 .recommendation-card strong,
@@ -983,6 +993,13 @@ button:active {
   font-size: 0.78rem;
   font-weight: 760;
   text-decoration: none;
+}
+
+.recommendation-meta button:disabled {
+  cursor: not-allowed;
+  color: var(--text-soft);
+  background: rgba(255, 248, 231, 0.075);
+  border: 1px solid rgba(255, 248, 231, 0.10);
 }
 
 
@@ -1056,6 +1073,62 @@ button:active {
   line-height: 1.38;
 }
 
+.queue-section {
+  padding: 12px;
+  border-radius: 24px;
+  background: rgba(255, 248, 231, 0.045);
+  border: 1px solid rgba(255, 248, 231, 0.08);
+}
+
+.queue-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.queue-header h2 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 1.08rem;
+  letter-spacing: -0.025em;
+}
+
+.queue-header > span {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 760;
+}
+
+.queue-empty,
+.set-tonight-helper {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.queue-empty {
+  padding: 12px 4px 4px;
+}
+
+.selected-badge {
+  display: inline-flex !important;
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: #eaffef !important;
+  background: rgba(132, 231, 165, 0.12);
+  border: 1px solid rgba(132, 231, 165, 0.22);
+  font-size: 0.72rem !important;
+  font-weight: 800;
+}
+
+.set-tonight-helper {
+  padding: 0 2px;
+}
+
 .vote-row {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr);
@@ -1075,4 +1148,10 @@ button:active {
   color: #241413;
   background: linear-gradient(145deg, var(--cream), var(--gold));
   border: 0;
+}
+
+.vote-row button.current-vote {
+  color: #241413;
+  background: linear-gradient(145deg, #eaffef, #84e7a5);
+  border-color: rgba(132, 231, 165, 0.42);
 }
