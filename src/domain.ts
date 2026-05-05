@@ -1,0 +1,429 @@
+export type ActiveMode = 'tv_manual' | 'laptop_auto'
+export type ParticipantRole = 'host' | 'guest'
+export type ReadyStatus = 'idle' | 'ready'
+export type CountdownPhase = 'idle' | 'counting' | 'play' | 'cancelled'
+export type RemoteSignal = 'pause' | 'buffering' | 'resync' | 'next_episode' | 'play_now' | 'message'
+
+export interface Participant {
+  id: string
+  displayName: string
+  role: ParticipantRole
+  joinedAt: string
+  lastSeenAt: string
+}
+
+export interface WatchSetup {
+  service: string
+  title: string
+  targetTimestamp: string
+}
+
+export interface CountdownState {
+  phase: CountdownPhase
+  startedAt?: string
+  startsAtEpochMs?: number
+  durationSeconds: number
+}
+
+export interface ExtensionCapabilities {
+  html5Video: boolean
+  play: boolean
+  pause: boolean
+  seek: boolean
+}
+
+export interface ExtensionPairing {
+  extensionId: string
+  participantId: string
+  pairedAt: string
+  lastSeenAt: string
+  tabTitle?: string
+  urlOrigin?: string
+  capabilities: ExtensionCapabilities
+}
+
+export interface PlaybackStatus {
+  extensionId: string
+  participantId: string
+  paused: boolean
+  currentTime: number
+  duration?: number
+  playbackRate?: number
+  readyState?: number
+  seeking?: boolean
+  ended?: boolean
+  tabTitle?: string
+  urlOrigin?: string
+  updatedAt: string
+}
+
+export interface RoomState {
+  roomId: string
+  hostId: string
+  participants: Record<string, Participant>
+  service: string
+  title: string
+  targetTimestamp: string
+  readyState: Record<string, ReadyStatus>
+  countdownState: CountdownState
+  lastSyncAt?: string
+  activeMode: ActiveMode
+  lastSignal?: RoomSignal
+  resyncTimestamp?: string
+  extensions: Record<string, ExtensionPairing>
+  playbackByParticipant: Record<string, PlaybackStatus>
+  eventLog: RoomEvent[]
+  createdAt: string
+  updatedAt: string
+}
+
+export interface RoomSignal {
+  type: RemoteSignal
+  message: string
+  actorId: string
+  actorName: string
+  createdAt: string
+}
+
+export type RoomEvent =
+  | { type: 'participant_joined'; participant: Participant; at: string }
+  | { type: 'participant_ready'; participantId: string; ready: boolean; at: string }
+  | { type: 'setup_updated'; setup: WatchSetup; actorId: string; at: string }
+  | { type: 'countdown_started'; actorId: string; startsAtEpochMs: number; durationSeconds: number; at: string }
+  | { type: 'countdown_cancelled'; actorId: string; at: string }
+  | { type: 'play_now'; actorId: string; at: string }
+  | { type: 'pause_requested'; actorId: string; at: string }
+  | { type: 'buffering_started'; actorId: string; at: string }
+  | { type: 'buffering_resolved'; actorId: string; at: string }
+  | { type: 'resync_requested'; actorId: string; timestamp: string; at: string }
+  | { type: 'timestamp_submitted'; actorId: string; timestamp: string; at: string }
+  | { type: 'chat_message'; actorId: string; message: string; at: string }
+  | { type: 'next_episode_requested'; actorId: string; at: string }
+  | { type: 'extension_paired'; extensionId: string; participantId: string; capabilities: ExtensionCapabilities; tabTitle?: string; urlOrigin?: string; at: string }
+  | { type: 'playback_status'; actorId: string; extensionId: string; paused: boolean; currentTime: number; duration?: number; playbackRate?: number; readyState?: number; seeking?: boolean; ended?: boolean; tabTitle?: string; urlOrigin?: string; at: string }
+  | { type: 'extension_error'; actorId: string; extensionId: string; message: string; at: string }
+  | { type: 'extension_command'; extensionId: string; command: string; payload?: unknown; at: string }
+
+export const DEFAULT_SETUP: WatchSetup = {
+  service: '',
+  title: '',
+  targetTimestamp: '00:00',
+}
+
+export function nowIso(): string {
+  return new Date().toISOString()
+}
+
+export function makeId(prefix: string): string {
+  const random = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2, 10)
+  return `${prefix}_${random.replaceAll('-', '').slice(0, 10)}`
+}
+
+export function makeRoomCode(): string {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const values = new Uint8Array(6)
+  globalThis.crypto?.getRandomValues?.(values)
+  return Array.from(values, (value) => alphabet[value % alphabet.length]).join('')
+}
+
+export function normalizeRoomCode(input: string): string {
+  return input.trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 12)
+}
+
+export function isRoomEvent(value: unknown): value is RoomEvent {
+  if (!isRecord(value) || typeof value.type !== 'string' || typeof value.at !== 'string') return false
+
+  switch (value.type) {
+    case 'participant_joined':
+      return isParticipant(value.participant)
+    case 'participant_ready':
+      return typeof value.participantId === 'string' && value.participantId.length > 0 && typeof value.ready === 'boolean'
+    case 'setup_updated':
+      return isWatchSetup(value.setup) && hasActor(value)
+    case 'countdown_started':
+      return hasActor(value) && typeof value.startsAtEpochMs === 'number' && typeof value.durationSeconds === 'number'
+    case 'countdown_cancelled':
+    case 'play_now':
+    case 'pause_requested':
+    case 'buffering_started':
+    case 'buffering_resolved':
+    case 'next_episode_requested':
+      return hasActor(value)
+    case 'resync_requested':
+    case 'timestamp_submitted':
+      return hasActor(value) && typeof value.timestamp === 'string'
+    case 'chat_message':
+      return hasActor(value) && typeof value.message === 'string' && value.message.trim().length > 0
+    case 'extension_paired':
+      return typeof value.extensionId === 'string'
+        && value.extensionId.length > 0
+        && typeof value.participantId === 'string'
+        && value.participantId.length > 0
+        && isExtensionCapabilities(value.capabilities)
+        && optionalString(value.tabTitle)
+        && optionalString(value.urlOrigin)
+    case 'playback_status':
+      return hasActor(value)
+        && typeof value.extensionId === 'string'
+        && value.extensionId.length > 0
+        && typeof value.paused === 'boolean'
+        && typeof value.currentTime === 'number'
+        && optionalNumber(value.duration)
+        && optionalNumber(value.playbackRate)
+        && optionalNumber(value.readyState)
+        && optionalBoolean(value.seeking)
+        && optionalBoolean(value.ended)
+        && optionalString(value.tabTitle)
+        && optionalString(value.urlOrigin)
+    case 'extension_error':
+      return hasActor(value)
+        && typeof value.extensionId === 'string'
+        && value.extensionId.length > 0
+        && typeof value.message === 'string'
+        && value.message.trim().length > 0
+    case 'extension_command':
+      return typeof value.extensionId === 'string' && value.extensionId.length > 0 && typeof value.command === 'string' && value.command.length > 0
+    default:
+      return false
+  }
+}
+
+export function isParticipant(value: unknown): value is Participant {
+  return isRecord(value)
+    && typeof value.id === 'string'
+    && value.id.length > 0
+    && typeof value.displayName === 'string'
+    && (value.role === 'host' || value.role === 'guest')
+    && typeof value.joinedAt === 'string'
+    && typeof value.lastSeenAt === 'string'
+}
+
+export function isExtensionCapabilities(value: unknown): value is ExtensionCapabilities {
+  return isRecord(value)
+    && typeof value.html5Video === 'boolean'
+    && typeof value.play === 'boolean'
+    && typeof value.pause === 'boolean'
+    && typeof value.seek === 'boolean'
+}
+
+function isWatchSetup(value: unknown): value is WatchSetup {
+  return isRecord(value)
+    && typeof value.service === 'string'
+    && typeof value.title === 'string'
+    && typeof value.targetTimestamp === 'string'
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function hasActor(value: Record<string, unknown>): value is Record<string, unknown> & { actorId: string } {
+  return typeof value.actorId === 'string' && value.actorId.length > 0
+}
+
+function optionalString(value: unknown): boolean {
+  return value === undefined || typeof value === 'string'
+}
+
+function optionalNumber(value: unknown): boolean {
+  return value === undefined || typeof value === 'number'
+}
+
+function optionalBoolean(value: unknown): boolean {
+  return value === undefined || typeof value === 'boolean'
+}
+
+export function createParticipant(displayName: string, role: ParticipantRole): Participant {
+  const at = nowIso()
+  return {
+    id: makeId('person'),
+    displayName: displayName.trim() || (role === 'host' ? 'Host' : 'Partner'),
+    role,
+    joinedAt: at,
+    lastSeenAt: at,
+  }
+}
+
+export function createRoom(host: Participant): RoomState {
+  const at = nowIso()
+  const roomId = makeRoomCode()
+  return {
+    roomId,
+    hostId: host.id,
+    participants: { [host.id]: host },
+    service: DEFAULT_SETUP.service,
+    title: DEFAULT_SETUP.title,
+    targetTimestamp: DEFAULT_SETUP.targetTimestamp,
+    readyState: { [host.id]: 'idle' },
+    countdownState: { phase: 'idle', durationSeconds: 3 },
+    activeMode: 'tv_manual',
+    extensions: {},
+    playbackByParticipant: {},
+    eventLog: [{ type: 'participant_joined', participant: host, at }],
+    createdAt: at,
+    updatedAt: at,
+  }
+}
+
+export function participantList(room: RoomState): Participant[] {
+  return Object.values(room.participants).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt))
+}
+
+export function bothReady(room: RoomState): boolean {
+  const people = participantList(room)
+  return people.length >= 2 && people.every((person) => room.readyState[person.id] === 'ready')
+}
+
+export function applyRoomEvent(room: RoomState, event: RoomEvent): RoomState {
+  const normalizedRoom = ensureExtensionContainers(room)
+  const eventLog = [...normalizedRoom.eventLog.slice(-49), event]
+  const updatedAt = event.at
+  const next: RoomState = { ...normalizedRoom, eventLog, updatedAt }
+
+  switch (event.type) {
+    case 'participant_joined':
+      return {
+        ...next,
+        participants: { ...normalizedRoom.participants, [event.participant.id]: event.participant },
+        readyState: { ...normalizedRoom.readyState, [event.participant.id]: 'idle' },
+      }
+    case 'participant_ready':
+      return {
+        ...next,
+        readyState: { ...normalizedRoom.readyState, [event.participantId]: event.ready ? 'ready' : 'idle' },
+      }
+    case 'setup_updated':
+      return {
+        ...next,
+        service: event.setup.service,
+        title: event.setup.title,
+        targetTimestamp: event.setup.targetTimestamp || '00:00',
+        readyState: resetReady(normalizedRoom),
+        countdownState: { phase: 'idle', durationSeconds: 3 },
+      }
+    case 'countdown_started':
+      return {
+        ...next,
+        countdownState: {
+          phase: 'counting',
+          startedAt: event.at,
+          startsAtEpochMs: event.startsAtEpochMs,
+          durationSeconds: event.durationSeconds,
+        },
+      }
+    case 'countdown_cancelled':
+      return { ...next, countdownState: { phase: 'idle', durationSeconds: 3 }, readyState: resetReady(normalizedRoom) }
+    case 'play_now':
+      return {
+        ...next,
+        countdownState: { ...normalizedRoom.countdownState, phase: 'play' },
+        lastSyncAt: event.at,
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'play_now', 'GO — press play now.', event.at),
+      }
+    case 'pause_requested':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'pause', 'Partner needs a pause — pause your TV now.', event.at) }
+    case 'buffering_started':
+      return {
+        ...next,
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'buffering', 'Partner is buffering — pause now.', event.at),
+        readyState: resetReady(normalizedRoom),
+        countdownState: { phase: 'idle', durationSeconds: 3 },
+      }
+    case 'buffering_resolved':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'buffering', 'Buffering fixed — both tap ready again.', event.at) }
+    case 'resync_requested':
+      return {
+        ...next,
+        targetTimestamp: event.timestamp || normalizedRoom.targetTimestamp,
+        resyncTimestamp: event.timestamp,
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'resync', `RESYNC — seek manually to ${event.timestamp || normalizedRoom.targetTimestamp}.`, event.at),
+        readyState: resetReady(normalizedRoom),
+        countdownState: { phase: 'idle', durationSeconds: 3 },
+      }
+    case 'timestamp_submitted':
+      return { ...next, targetTimestamp: event.timestamp || normalizedRoom.targetTimestamp, resyncTimestamp: event.timestamp }
+    case 'chat_message':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'message', event.message.trim(), event.at) }
+    case 'next_episode_requested':
+      return {
+        ...next,
+        targetTimestamp: '00:00',
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'next_episode', 'Next episode — pause at 00:00, then both tap ready.', event.at),
+        readyState: resetReady(normalizedRoom),
+        countdownState: { phase: 'idle', durationSeconds: 3 },
+      }
+    case 'extension_paired':
+      return {
+        ...next,
+        activeMode: 'laptop_auto',
+        extensions: {
+          ...normalizedRoom.extensions,
+          [event.extensionId]: {
+            extensionId: event.extensionId,
+            participantId: event.participantId,
+            pairedAt: normalizedRoom.extensions[event.extensionId]?.pairedAt ?? event.at,
+            lastSeenAt: event.at,
+            tabTitle: event.tabTitle,
+            urlOrigin: event.urlOrigin,
+            capabilities: event.capabilities,
+          },
+        },
+        lastSignal: makeSignal(normalizedRoom, event.participantId, 'message', 'Chrome extension paired.', event.at),
+      }
+    case 'playback_status':
+      return {
+        ...next,
+        playbackByParticipant: {
+          ...normalizedRoom.playbackByParticipant,
+          [event.actorId]: {
+            extensionId: event.extensionId,
+            participantId: event.actorId,
+            paused: event.paused,
+            currentTime: event.currentTime,
+            duration: event.duration,
+            playbackRate: event.playbackRate,
+            readyState: event.readyState,
+            seeking: event.seeking,
+            ended: event.ended,
+            tabTitle: event.tabTitle,
+            urlOrigin: event.urlOrigin,
+            updatedAt: event.at,
+          },
+        },
+        extensions: normalizedRoom.extensions[event.extensionId]
+          ? {
+              ...normalizedRoom.extensions,
+              [event.extensionId]: {
+                ...normalizedRoom.extensions[event.extensionId],
+                lastSeenAt: event.at,
+                tabTitle: event.tabTitle ?? normalizedRoom.extensions[event.extensionId].tabTitle,
+                urlOrigin: event.urlOrigin ?? normalizedRoom.extensions[event.extensionId].urlOrigin,
+              },
+            }
+          : normalizedRoom.extensions,
+      }
+    case 'extension_error':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'message', `Extension error: ${event.message.trim()}`, event.at) }
+    case 'extension_command':
+      return next
+    default:
+      return next
+  }
+}
+
+function ensureExtensionContainers(room: RoomState): RoomState {
+  return {
+    ...room,
+    extensions: room.extensions ?? {},
+    playbackByParticipant: room.playbackByParticipant ?? {},
+  }
+}
+
+function resetReady(room: RoomState): Record<string, ReadyStatus> {
+  return Object.fromEntries(Object.keys(room.participants).map((id) => [id, 'idle']))
+}
+
+function makeSignal(room: RoomState, actorId: string, type: RemoteSignal, message: string, at: string): RoomSignal {
+  const actorName = room.participants[actorId]?.displayName ?? 'Partner'
+  return { type, message, actorId, actorName, createdAt: at }
+}

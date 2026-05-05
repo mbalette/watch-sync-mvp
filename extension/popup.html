@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Watch Sync</title>
+    <link rel="stylesheet" href="popup.css">
+  </head>
+  <body>
+    <main>
+      <h1>Watch Sync</h1>
+      <p class="hint">Local unpacked extension MVP for accessible HTML5 video tabs.</p>
+      <label>WebSocket URL<input id="wsUrl" placeholder="ws://127.0.0.1:8787"></label>
+      <label>Room code<input id="roomCode" placeholder="ABC123"></label>
+      <label>Participant ID<input id="participantId" placeholder="person_..."></label>
+      <div class="buttons">
+        <button id="pairButton" type="button">Pair this tab</button>
+        <button id="detectButton" type="button">Detect video</button>
+      </div>
+      <pre id="status" aria-live="polite">Idle.</pre>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>
