@@ -15,7 +15,7 @@ describe('TV remote helper endpoints', () => {
     const health = await fetchJson(`${baseUrl}/health`)
     const targets = await fetchJson(`${baseUrl}/targets`)
 
-    expect(health.targets).toEqual(['roku-ecp', 'lg-webos-experimental', 'samsung-tizen-beta', 'sony-bravia-beta', 'philips-jointspace-experimental', 'vizio-smartcast-experimental'])
+    expect(health.targets).toEqual(['roku-ecp', 'lg-webos-experimental', 'samsung-tizen-beta', 'adb-helper-advanced', 'sony-bravia-beta', 'philips-jointspace-experimental', 'vizio-smartcast-experimental'])
     expect(targets.targets).toHaveLength(10)
     expect(targets.targets.map((target: { id: string }) => target.id)).toContain('apple-tv-manual-only')
   })
@@ -61,6 +61,46 @@ describe('TV remote helper endpoints', () => {
     await expect(postJson(`${baseUrl}/philips/key`, { host: '127.0.0.1', key: 'PlayPause' })).resolves.toMatchObject({ ok: true })
     await expect(postJson(`${baseUrl}/vizio/key`, { host: '127.0.0.1', key: 'play' })).resolves.toMatchObject({ ok: true })
     expect(calls).toEqual(['lg-pair', 'lg-play', 'samsung-pair', 'samsung-KEY_PLAY', 'sony-info', 'sony-ircc', 'philips-PlayPause', 'vizio-play'])
+  })
+
+  it('routes ADB connect and discrete media keys through injectable runner without shell strings', async () => {
+    const calls: string[][] = []
+    const baseUrl = await startHelper({
+      runAdb: async (args) => {
+        calls.push(args)
+        return { stdout: 'ok', stderr: '' }
+      },
+    })
+
+    await expect(postJson(`${baseUrl}/adb/connect`, { host: '192.168.1.50:5555' })).resolves.toMatchObject({ ok: true, platform: 'adb-helper-advanced' })
+    await expect(postJson(`${baseUrl}/adb/media-key`, { host: '192.168.1.50:5555', key: 'KEYCODE_MEDIA_PLAY' })).resolves.toMatchObject({ ok: true, platform: 'adb-helper-advanced', key: 'KEYCODE_MEDIA_PLAY' })
+    await expect(postJson(`${baseUrl}/adb/media-key`, { host: '192.168.1.50:5555', key: 'KEYCODE_MEDIA_PAUSE' })).resolves.toMatchObject({ ok: true, platform: 'adb-helper-advanced', key: 'KEYCODE_MEDIA_PAUSE' })
+
+    expect(calls).toEqual([
+      ['connect', '192.168.1.50:5555'],
+      ['-s', '192.168.1.50:5555', 'shell', 'input', 'keyevent', 'KEYCODE_MEDIA_PLAY'],
+      ['-s', '192.168.1.50:5555', 'shell', 'input', 'keyevent', 'KEYCODE_MEDIA_PAUSE'],
+    ])
+    expect(JSON.stringify(calls)).not.toContain('KEYCODE_MEDIA_PLAY_PAUSE')
+  })
+
+  it('rejects ADB toggle key without echoing shell-shaped host input', async () => {
+    const calls: string[][] = []
+    const baseUrl = await startHelper({
+      runAdb: async (args) => {
+        calls.push(args)
+        return { stdout: 'ok', stderr: '' }
+      },
+    })
+
+    const toggle = await postJson(`${baseUrl}/adb/media-key`, { host: '192.168.1.50:5555', key: 'KEYCODE_MEDIA_PLAY_PAUSE' })
+    const injection = await postJson(`${baseUrl}/adb/connect`, { host: '192.168.1.50; rm -rf /' })
+
+    expect(toggle).toMatchObject({ ok: false })
+    expect(String(toggle.error)).toMatch(/Unsupported ADB media key/)
+    expect(injection).toMatchObject({ ok: false })
+    expect(JSON.stringify(injection)).not.toContain('rm -rf')
+    expect(calls).toEqual([])
   })
 
   it('posts Home Assistant webhook test and play payloads once through the local helper', async () => {

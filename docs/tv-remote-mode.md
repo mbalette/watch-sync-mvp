@@ -1,39 +1,57 @@
-# TV Remote Mode feasibility and MVP
+# Remote Start / TV Remote Mode feasibility and MVP
 
-Verdict: Roku-first generic remote control is technically feasible as a native/helper proof path, but public Roku mobile ECP launch is **Build later** until Roku resolves contradictory official guidance about third-party mobile ECP use. Treat Roku control as internal/TestFlight beta-only if the product accepts that policy ambiguity. It is **not** universal smart-TV streaming sync.
+Remote Start v1 is local device control at countdown GO, not content/provider availability. Users manually open the selected title in their own streaming app, seek to the agreed sync point, pause, ready up, and use the shared countdown. If a locally linked device supports a safe discrete Play command and the user opts in with `Use Remote Start at GO`, Watch Sync sends exactly one local Play command at GO. Manual countdown remains the universal fallback for every platform and every error state.
 
-Content discovery/provider policy lives separately in `docs/data-provider-strategy.md`; do not couple provider availability claims to TV Remote Mode control architecture.
+Content discovery/provider policy lives separately in `docs/data-provider-strategy.md`; do not couple provider availability claims to Remote Start control architecture.
+
+## Remote Start flow
+
+1. Pick a title in the room. Provider availability/recommendations do not grant device-control capability.
+2. Each participant opens the title manually in their own streaming app/device.
+3. Each participant pauses at the room sync point.
+4. Optional: link a local device/helper in `Remote Start`, test/pair it, and explicitly enable `Use Remote Start at GO`.
+5. Everyone taps ready. At GO, the host still emits the normal room `play_now`; only a browser with a locally linked, opted-in, safe-capability device sends a local Play command.
+6. If focus, ads, overlays, DRM, app state, buffering, device sleep, network, or model variance causes the app to ignore Play/Pause, users press play manually.
+
+GO uses Play, not Stop or toggle: Play is idempotent-ish when the app is paused at the sync point. Stop loses playback state, and Play/Pause toggles can pause a device that is already playing or double-fired. Android/Fire/Google TV ADB GO must use `KEYCODE_MEDIA_PLAY` / keycode `126`, never `KEYCODE_MEDIA_PLAY_PAUSE` / `85`.
 
 ## Honest product claim
 
 Hero copy:
 
-> Movie night starts together. Open the same show on any TV, pause at the sync point, then Watch Sync counts everyone in. On supported TVs, it can press Play for you over home Wi‑Fi.
+> Movie night starts together. Open the same show on any TV, pause at the sync point, then Watch Sync counts everyone in. On supported local devices, Remote Start can press Play for you at GO.
 
 Settings copy:
 
-> TV Remote Mode is optional. Each person links their own supported TV/device on their own Wi‑Fi. Watch Sync coordinates the room and countdown; your phone or local helper sends the local Play command.
+> Remote Start is optional. Each person links their own supported local device/helper on their own Wi‑Fi. Watch Sync coordinates the room and countdown; your browser/local helper sends the local Play command only when you opt in.
 
 Compatibility disclaimer:
 
-> Manual sync works with every streaming service because you control the TV yourself. Remote Mode is best-effort and only sends generic remote keys on supported devices after you open the show and pause it. It does not choose Netflix/Hulu/Disney/Prime/Max content, seek inside native TV apps, or guarantee every app will obey Play/Pause.
+> Manual sync works with every streaming service because you control the TV yourself. Remote Start is best-effort and only sends generic remote keys on supported devices after you open the show and pause it. It does not choose Netflix/Hulu/Disney/Prime/Max content, seek inside native TV apps, verify provider availability, or guarantee every app will obey Play/Pause.
 
-iOS/Roku policy update:
+## Capability matrix
 
-> Apple-side native iOS known-IP Roku control is feasible with public APIs, Local Network permission, and narrow ATS/local HTTP exceptions. Public launch waits on Roku policy clarification. Beta scope is manual IP, foreground-only, `GET /query/device-info`, exactly one `POST /keypress/Play` at countdown GO, local-only Roku metadata, no backend TV connection or credential storage, and manual countdown fallback always.
+| Platform | UI status | GO Play | Safe Pause button | Setup | Hardware validation | Public claim |
+|---|---|---:|---:|---|---|---|
+| Roku / Roku TV / local streaming device | Supported | `POST /keypress/Play` after local helper/native path; opt-in required | No pause claim in v1 | Host/IP; Roku network/mobile control must allow ECP | Not yet complete | Supported best-effort Play only |
+| LG webOS | Beta | `ssap://media.controls/play` after pairing/client key | Yes, `pause` | Local helper + TV prompt/client key | Not yet complete | Beta; model/app variance |
+| Samsung / Tizen | Beta | `KEY_PLAY` | Yes, `KEY_PAUSE` | Local helper + TV approval/token where supported | Not yet complete | Beta/unofficial LAN protocol |
+| Fire TV / Android TV / Google TV ADB helper | Advanced setup | `adb -s <host[:port]> shell input keyevent KEYCODE_MEDIA_PLAY` (`126`) | Yes, `KEYCODE_MEDIA_PAUSE` (`127`) | Developer options, wireless debugging/ADB auth/pairing, local helper | Not yet complete | Advanced helper only, not consumer-default support |
+| Sony / Bravia | Beta | IRCC Play code after `getRemoteControllerInfo` | Not exposed as safe in v1 | Enable IP Control; optional PSK; provide Play IRCC code | Not yet complete | Beta; consumer model variance |
+| Philips JointSpace | Beta | Disabled for GO because available Play/Pause path is toggle-risk | Not exposed as safe | JointSpace host/API version; auth varies | Not yet complete | Beta/manual countdown for GO |
+| Vizio SmartCast | Beta | Community `play` key envelope | Yes, community `pause` key envelope | PIN/token/local helper | Not yet complete | Beta/unofficial/community path |
+| Home Assistant advanced bridge | Advanced setup | Helper posts local webhook; user's HA automation should call `media_player.media_play` or equivalent | No generic pause in Watch Sync v1 | Existing local HA, local-only webhook, user's own automation/script | User-specific | Advanced local bridge; no HA tokens/entities in backend |
+| Apple TV | Manual-only | No direct command | No direct command | Manual countdown | N/A | Manual-only; no direct-control claim |
 
-Avoid:
-
-> Automatically syncs Netflix/Hulu/Disney on every smart TV.
-
-## Implemented MVP path
+## Implemented v1 paths
 
 Files:
 
-- `server/tv-remote.ts` — Roku ECP client for `GET /query/device-info` and `POST /keypress/Play`; production default port `8060`, test-injectable port for mock tests.
-- `server/tv-remote-helper.ts` — local HTTP helper exposing `/health`, `/roku/device-info`, and `/roku/keypress` with CORS for local dev; exports a server factory for endpoint tests.
-- `src/App.tsx` — `TV Remote Mode` drawer with Roku IP, helper URL, Test Roku, and Send Play.
-- `server/tv-remote.test.ts` — mock Roku ECP tests for device-info parsing, Play dispatch, and rejection of unsupported keys such as `Pause` until verified.
+- `src/tv-remote-device.ts` — capability model, linked-device persistence, `useRemoteStartAtGo` default false, safe GO gate, test/play/pause helper request builders, Android ADB discrete media-key requests, Apple TV manual-only blocking.
+- `src/App.tsx` — `Remote Start` drawer, status platform picker, helper/device fields only where relevant, `Test connection` / `Pair/Test`, manual `Send Play`, safe-only `Send Pause`, and `Use Remote Start at GO` opt-in.
+- `server/tv-remote-helper.ts` — local helper endpoints for Roku/LG/Samsung/Sony/Philips/Vizio/Home Assistant and ADB `/adb/connect` + `/adb/media-key` using injected or `execFile` argv-array execution.
+- `server/adb-helper-remote.ts` — ADB argv builders allow only `KEYCODE_MEDIA_PLAY` and `KEYCODE_MEDIA_PAUSE`; toggle is rejected.
+- `server/tv-remote-targets.ts` — target metadata labels ADB as implemented advanced helper, Apple TV manual-only, and hardware validation false where unproven.
 
 Run locally:
 
@@ -44,12 +62,13 @@ npm run dev:tv-remote
 
 Then in the app:
 
-1. Open your streaming app on Roku manually.
+1. Open the title manually in the streaming app.
 2. Seek/pause at the shared timestamp.
-3. Open `TV Remote Mode`.
-4. Enter the Roku IP, e.g. `192.168.1.42`.
-5. Test Roku.
-6. Tap Send Play, or let countdown GO attempt Play when the host has a Roku configured.
+3. Open `Remote Start`.
+4. Choose a platform and enter only the fields needed for that platform.
+5. `Test connection` or `Pair/Test`.
+6. Optional manual test: `Send Play`; `Send Pause` appears only when the capability says pause is safe.
+7. Enable `Use Remote Start at GO` only if you want Watch Sync to send one local Play at GO. Without the opt-in, the manual countdown remains unchanged.
 
 ## Why this is helper/native, not pure hosted PWA
 
@@ -159,11 +178,12 @@ Production data plan:
 
 ## Linked-device manager and GO command routing
 
-The PWA now includes a local linked-device manager inside `TV Remote Mode`:
+The PWA now includes a local linked-device manager inside `Remote Start`:
 
-- Platform picker: Roku, LG webOS, Samsung/Tizen, Sony/Bravia, Philips JointSpace, Vizio SmartCast, Home Assistant webhook.
-- Helper URL field defaults to `http://127.0.0.1:8790`.
+- Platform picker: Roku/local streaming device, LG webOS, Samsung/Tizen, Fire TV / Android TV / Google TV ADB helper, Sony/Bravia, Philips JointSpace, Vizio SmartCast, Home Assistant advanced bridge, and Apple TV manual-only.
+- Helper URL appears only for helper-backed platforms and defaults to `http://127.0.0.1:8790`.
 - Platform-specific fields stay local in browser storage:
+  - host/IP or ADB `host[:port]` where needed
   - LG `clientKey`
   - Samsung `token`
   - Sony `psk` and Play `irccCode`
@@ -172,16 +192,20 @@ The PWA now includes a local linked-device manager inside `TV Remote Mode`:
   - Home Assistant webhook URL
 - Buttons:
   - `Save local`
-  - `Pair/Test`
-  - `Send Play`
-- Countdown GO calls the selected linked device once through the safe platform-specific helper endpoint:
+  - `Test connection` or `Pair/Test`
+  - `Send Play` only when the capability supports a play command
+  - `Send Pause` only when the capability says pause is safe
+- `Use Remote Start at GO` persists as `useRemoteStartAtGo`, defaults false, and is required before countdown GO sends anything.
+- Countdown GO calls the selected linked device once through the safe platform-specific helper endpoint only when opted in:
   - Roku: `/roku/keypress` with `Play`
   - LG: `/lg-webos/media` with `play` after `clientKey`
   - Samsung: `/samsung/keypress` with `KEY_PLAY`
+  - Android/Fire/Google TV ADB: `/adb/media-key` with `KEYCODE_MEDIA_PLAY` / keycode `126`; never `KEYCODE_MEDIA_PLAY_PAUSE`
   - Sony: `/sony/ircc` after a Play IRCC code is provided
   - Vizio: `/vizio/key` with `play`
   - Home Assistant webhook: `/home-assistant/webhook` posts one local `watch_sync_go` event to the user-provided HA webhook URL.
   - Philips: automatic GO is blocked because `PlayPause` is a risky toggle; manual countdown remains the fallback.
+  - Apple TV: manual-only, no direct commands.
 
 The room backend still only coordinates room/countdown/state. Device hostnames, pairing tokens, PSKs, IRCC codes, auth tokens, and Home Assistant webhook URLs are not sent to the realtime backend.
 
@@ -299,8 +323,9 @@ Cast:
 Android TV / Google TV / Fire TV:
 
 - ADB is official developer tooling, but consumer-hostile.
-- Implemented scaffold: `server/adb-helper-remote.ts` + `server/adb-helper-remote.test.ts`.
+- Implemented helper: `server/adb-helper-remote.ts` + `server/adb-helper-remote.test.ts` for argv construction, plus `server/tv-remote-helper.ts` endpoints `/adb/connect` and `/adb/media-key` with dependency injection for tests.
 - Strict command allowlist, argv arrays only, no shell string concatenation.
+- GO uses only `KEYCODE_MEDIA_PLAY` (`126`); pause uses only `KEYCODE_MEDIA_PAUSE` (`127`). `KEYCODE_MEDIA_PLAY_PAUSE` (`85`) is rejected for GO/toggle safety.
 - Product copy must say developer/debugging setup required.
 
 ### Phase 5: Other brand-specific beta queue

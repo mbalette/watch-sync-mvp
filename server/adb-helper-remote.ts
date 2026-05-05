@@ -21,6 +21,15 @@ export function adbPlayArgs(): string[] {
   return adbMediaKeyArgs('KEYCODE_MEDIA_PLAY')
 }
 
+export function adbPauseArgs(): string[] {
+  return adbMediaKeyArgs('KEYCODE_MEDIA_PAUSE')
+}
+
+export function adbMediaKeyForDeviceArgs(hostInput: string, keyInput: string): string[] {
+  const host = sanitizeAdbHost(hostInput)
+  return ['-s', host, ...adbMediaKeyArgs(keyInput)]
+}
+
 function sanitizeAdbHost(input: string): string {
   const host = input.trim()
   if (!/^[a-zA-Z0-9.:-]+$/.test(host)) throw new Error('ADB host must be a host[:port] value without shell metacharacters.')

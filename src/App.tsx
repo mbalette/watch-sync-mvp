@@ -19,10 +19,14 @@ import {
 } from './domain'
 import { createWebSocketRoomTransport, type RoomTransport, type TransportStatus } from './transport'
 import {
+  buildDevicePauseRequest,
   buildDevicePlayRequest,
   buildDeviceTestRequest,
+  canUseRemoteStartAtGo,
+  getRemoteStartCapability,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
+  platformNeedsHost,
   platformNeedsPairing,
   platformNeedsSonyIrcc,
   saveLinkedTvDevice,
@@ -190,18 +194,16 @@ function App() {
   const readyCount = room ? people.filter((person) => room.readyState[person.id] === 'ready').length : 0
   const setupOpen = Boolean(room && (room.targetTimestamp === '00:00' || showSetupSheet))
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
-  const tvRemoteConfigured = linkedTvDevice.platform === 'home_assistant_webhook'
-    ? Boolean(linkedTvDevice.webhookUrl?.trim())
-    : linkedTvDevice.host.trim().length > 0
+  const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
+  const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
   const tvRemoteRoadmap = [
-    { label: 'Roku', status: 'Live now', note: 'Generic Play key via local helper/native path.' },
-    { label: 'Home Assistant webhook', status: 'Advanced local bridge', note: 'Local-only HA webhook can trigger a user script/action; no HA tokens in Watch Sync servers.' },
-    { label: 'LG webOS', status: 'Helper adapter', note: 'Experimental pairing + SSAP play/pause endpoints; hardware validation required.' },
-    { label: 'Samsung', status: 'Helper beta', note: 'Unofficial LAN KEY_PLAY endpoint after TV approval; model variance expected.' },
-    { label: 'Cast', status: 'Session only', note: 'Can control Cast sessions Watch Sync starts/joins, not native TV apps.' },
-    { label: 'Sony/Vizio/Philips', status: 'Helper beta', note: 'Mock-tested key endpoints; ship as supported only after hardware tests.' },
-    { label: 'Fire/Android TV', status: 'Advanced helper', note: 'ADB/dev-mode helper only; not consumer default.' },
-    { label: 'Apple TV', status: 'Manual only', note: 'No public App-Store-safe generic remote path verified.' },
+    { label: 'Roku/local streaming device', status: 'Supported', note: 'Sends a discrete Play key via local helper; no pause claim.' },
+    { label: 'LG webOS', status: 'Beta', note: 'Local helper pairing + SSAP Play/Pause; hardware validation still pending.' },
+    { label: 'Samsung/Tizen', status: 'Beta', note: 'Unofficial LAN KEY_PLAY/KEY_PAUSE after TV approval; model variance expected.' },
+    { label: 'Fire TV / Android TV / Google TV', status: 'Advanced setup', note: 'ADB helper with KEYCODE_MEDIA_PLAY/PAUSE; developer mode and pairing required.' },
+    { label: 'Sony / Philips / Vizio', status: 'Beta', note: 'Brand-specific helper paths; Philips auto GO is disabled because PlayPause is a risky toggle.' },
+    { label: 'Home Assistant', status: 'Advanced setup', note: 'Local bridge to your own media_player/media_play automation; no HA secrets on Watch Sync servers.' },
+    { label: 'Apple TV', status: 'Manual-only', note: 'No direct-control claim; use manual countdown.' },
   ]
 
   useEffect(() => {
@@ -268,7 +270,7 @@ function App() {
     return payload
   }, [linkedTvDevice.helperUrl])
 
-  const runHelperRequest = useCallback(async (request: ReturnType<typeof buildDevicePlayRequest> | ReturnType<typeof buildDeviceTestRequest>) => {
+  const runHelperRequest = useCallback(async (request: ReturnType<typeof buildDevicePlayRequest> | ReturnType<typeof buildDevicePauseRequest> | ReturnType<typeof buildDeviceTestRequest>) => {
     if (request.unsafeReason) throw new Error(request.unsafeReason)
     if (request.method === 'GET') return callTvRemoteHelper(request.path)
     return callTvRemoteHelper(request.path, {
@@ -283,8 +285,10 @@ function App() {
     setLinkedTvDevice(next)
     saveLinkedTvDevice(next)
     const storageCopy = next.platform === 'home_assistant_webhook'
-      ? 'Home Assistant webhook URL saved locally in this browser/helper flow. Watch Sync servers do not store HA credentials, entity IDs, or webhook URLs.'
-      : `${next.label} saved locally. Room backend still only coordinates countdown; this helper controls your TV on your LAN.`
+      ? 'Home Assistant advanced bridge saved locally. Watch Sync servers do not store HA credentials, entity IDs, or webhook URLs.'
+      : next.platform === 'apple_tv_manual'
+        ? 'Apple TV saved as manual-only. Watch Sync will not send direct Apple TV commands; manual countdown remains the path.'
+        : `${next.label} saved locally for Remote Start. Room backend still only coordinates countdown; this helper controls your local device on your LAN.`
     setTvRemoteStatus(storageCopy)
   }, [linkedTvDevice])
 
@@ -309,7 +313,11 @@ function App() {
     const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
     const missingLocalConfig = savedDevice.platform === 'home_assistant_webhook'
       ? !savedDevice.webhookUrl?.trim()
-      : !savedDevice.host.trim()
+      : platformNeedsHost(savedDevice.platform) && !savedDevice.host.trim()
+    if (source === 'countdown' && !canUseRemoteStartAtGo(savedDevice)) {
+      setTvRemoteStatus('Remote Start at GO is off or this platform has no safe GO Play command. Manual countdown remains the fallback.')
+      return
+    }
     if (missingLocalConfig) {
       setTvRemoteStatus(savedDevice.platform === 'home_assistant_webhook'
         ? 'Add a Home Assistant webhook URL before sending GO. Manual countdown still works.'
@@ -338,6 +346,19 @@ function App() {
       setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} Play failed. Use manual countdown.`)
     }
   }, [linkedTvDevice, room, runHelperRequest])
+
+  const sendLinkedTvPause = useCallback(async () => {
+    const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
+    saveLinkedTvDevice(savedDevice)
+    setTvRemoteStatus(`Sending one ${savedDevice.label} Pause command via local helper...`)
+    try {
+      const request = buildDevicePauseRequest(savedDevice)
+      await runHelperRequest(request)
+      setTvRemoteStatus(`${savedDevice.label} Pause sent. This is a generic remote command only; if the app ignores it, pause manually at the sync point.`)
+    } catch (error) {
+      setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} Pause failed. Pause manually at the sync point.`)
+    }
+  }, [linkedTvDevice, runHelperRequest])
 
   const tick = useCallback((frequency = 660) => {
     if ('vibrate' in navigator) navigator.vibrate(frequency > 900 ? 180 : 80)
@@ -381,7 +402,7 @@ function App() {
         if (playNowDispatchKeyRef.current === playKey) return
         playNowDispatchKeyRef.current = playKey
         dispatch({ type: 'play_now', actorId: currentParticipantId, at: nowIso() })
-        if (tvRemoteConfigured) void sendLinkedTvPlay('countdown')
+        if (remoteStartAtGoEnabled) void sendLinkedTvPlay('countdown')
         if (isSoloRoom) {
           window.setTimeout(() => {
             dispatch({ type: 'countdown_cancelled', actorId: currentParticipantId, at: nowIso() })
@@ -391,7 +412,7 @@ function App() {
     }, 250)
 
     return () => window.clearInterval(interval)
-  }, [currentParticipantId, dispatch, isSoloRoom, room, sendLinkedTvPlay, tick, tvRemoteConfigured])
+  }, [currentParticipantId, dispatch, isSoloRoom, remoteStartAtGoEnabled, room, sendLinkedTvPlay, tick])
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -958,7 +979,7 @@ function App() {
             Find watch
           </button>
           <button className="secondary-action" type="button" onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
-            TV remote
+            TV remote + Remote Start
           </button>
         </div>
 
@@ -1156,15 +1177,18 @@ function App() {
             onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)}
             aria-expanded={showTvRemoteDrawer}
           >
-            <span>TV Remote Mode</span>
-            <small>Local helper, Roku, or advanced HA bridge</small>
+            <span>Remote Start</span>
+            <small>Local Play at GO, opt-in only</small>
           </button>
 
           {showTvRemoteDrawer && (
             <div className="drawer-content tv-remote-panel">
               <p>
-                TV Remote Mode links one local device/helper for this browser. You still open the show yourself and pause at the timestamp; at GO, Watch Sync sends one generic Play command where that is safe. Advanced Home Assistant mode posts one local webhook to your HA automation/script instead.
+                Remote Start is local device control at countdown GO. Everyone still opens the title themselves in their own streaming app, pauses at the sync point, readies up, and uses manual countdown as the universal fallback. If enabled below, Watch Sync sends one local Play command at GO only when the selected platform has a safe discrete Play path.
               </p>
+              {tvCapability.publicClaimLevel === 'manual-only' && (
+                <p className="mode-caveat">{linkedTvDevice.label} is manual-only here. Watch Sync does not claim direct control for this platform.</p>
+              )}
               {linkedTvDevice.platform === 'home_assistant_webhook' && (
                 <p className="mode-caveat">
                   Home Assistant webhook is for users already running HA locally. The recommended setup is a local-only HA webhook that triggers your own script/action, such as media_player.media_play. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Compatibility depends on your HA integration, device, and streaming app; manual countdown remains the fallback.
@@ -1193,29 +1217,31 @@ function App() {
                     aria-label="Home Assistant webhook URL"
                   />
                 </label>
-              ) : (
+              ) : platformNeedsHost(linkedTvDevice.platform) ? (
                 <label className="field-label compact">
-                  <span>TV IP / hostname</span>
+                  <span>{linkedTvDevice.platform === 'android_adb' ? 'ADB device host[:port]' : 'TV IP / hostname'}</span>
                   <input
                     value={linkedTvDevice.host}
                     onChange={(event) => updateLinkedDevice({ host: event.target.value })}
-                    placeholder="192.168.1.42"
+                    placeholder={linkedTvDevice.platform === 'android_adb' ? '192.168.1.50:5555' : '192.168.1.42'}
                     inputMode="url"
                     aria-label="TV IP address or hostname"
                   />
                 </label>
+              ) : null}
+              {tvCapability.requiresLocalHelper && (
+                <label className="field-label compact">
+                  <span>Helper URL</span>
+                  <input
+                    value={linkedTvDevice.helperUrl}
+                    onChange={(event) => updateLinkedDevice({ helperUrl: event.target.value })}
+                    placeholder="http://127.0.0.1:8790"
+                    inputMode="url"
+                    aria-label="TV remote helper URL"
+                  />
+                </label>
               )}
-              <label className="field-label compact">
-                <span>Helper URL</span>
-                <input
-                  value={linkedTvDevice.helperUrl}
-                  onChange={(event) => updateLinkedDevice({ helperUrl: event.target.value })}
-                  placeholder="http://127.0.0.1:8790"
-                  inputMode="url"
-                  aria-label="TV remote helper URL"
-                />
-              </label>
-              {linkedTvDevice.platform !== 'roku' && linkedTvDevice.platform !== 'home_assistant_webhook' && (
+              {linkedTvDevice.platform !== 'roku' && linkedTvDevice.platform !== 'home_assistant_webhook' && linkedTvDevice.platform !== 'android_adb' && linkedTvDevice.platform !== 'apple_tv_manual' && (
                 <label className="field-label compact">
                   <span>Protocol URL override</span>
                   <input
@@ -1256,10 +1282,24 @@ function App() {
                   <input value={linkedTvDevice.apiVersion ?? 6} onChange={(event) => updateLinkedDevice({ apiVersion: Number(event.target.value) || 6 })} inputMode="numeric" aria-label="Philips JointSpace API version" />
                 </label>
               )}
+              <label className="field-label compact checkbox-row">
+                <input
+                  type="checkbox"
+                  checked={linkedTvDevice.useRemoteStartAtGo}
+                  disabled={!tvCapability.canAutoPlayAtGo || !tvCapability.safeGoCommand}
+                  onChange={(event) => updateLinkedDevice({ useRemoteStartAtGo: event.target.checked })}
+                  aria-label="Use Remote Start at GO"
+                />
+                <span>Use Remote Start at GO</span>
+              </label>
+              <p className="mode-caveat">
+                GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
+              </p>
               <div className="remote-button-row triple">
                 <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>
-                <button type="button" onClick={testLinkedDevice}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Test webhook' : platformNeedsPairing(linkedTvDevice.platform) ? 'Pair/Test' : 'Test'}</button>
-                <button type="button" onClick={() => sendLinkedTvPlay('manual')}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Send GO webhook' : 'Send Play'}</button>
+                <button type="button" onClick={testLinkedDevice} disabled={!tvCapability.canTestConnection}>{tvCapability.requiresPairing ? 'Pair/Test' : 'Test connection'}</button>
+                {tvCapability.canSendPlay && <button type="button" onClick={() => sendLinkedTvPlay('manual')}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Send GO webhook' : 'Send Play'}</button>}
+                {tvCapability.canSendPause && <button type="button" onClick={sendLinkedTvPause}>Send Pause</button>}
               </div>
               <div className="extension-status">{tvRemoteStatus}</div>
               <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">

@@ -3,10 +3,14 @@ import { TV_REMOTE_TARGETS, getTvRemoteTarget, helperAdvertisedTargets, safeGoCo
 
 describe('TV remote target metadata', () => {
   it('advertises implemented helper targets without marking hardware validation complete', () => {
-    expect(helperAdvertisedTargets()).toEqual(['roku-ecp', 'lg-webos-experimental', 'samsung-tizen-beta', 'sony-bravia-beta', 'philips-jointspace-experimental', 'vizio-smartcast-experimental'])
+    expect(helperAdvertisedTargets()).toEqual(['roku-ecp', 'lg-webos-experimental', 'samsung-tizen-beta', 'adb-helper-advanced', 'sony-bravia-beta', 'philips-jointspace-experimental', 'vizio-smartcast-experimental'])
     expect(getTvRemoteTarget('roku-ecp')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('lg-webos-experimental')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('samsung-tizen-beta')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
+    expect(getTvRemoteTarget('adb-helper-advanced')).toMatchObject({ implementedInHelper: true, hardwareValidated: false, priority: 'advanced-helper' })
+    expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('KEYCODE_MEDIA_PLAY (126)')
+    expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('KEYCODE_MEDIA_PAUSE (127)')
+    expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('Do not use KEYCODE_MEDIA_PLAY_PAUSE/85 for GO')
     expect(getTvRemoteTarget('sony-bravia-beta')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('philips-jointspace-experimental')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('vizio-smartcast-experimental')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })

@@ -1,4 +1,6 @@
 import http from 'node:http'
+import { execFile } from 'node:child_process'
+import { adbConnectArgs, adbMediaKeyForDeviceArgs, assertAdbMediaKey } from './adb-helper-remote'
 import { getRokuDeviceInfo, sendRokuKeypress } from './tv-remote'
 import { pairLgWebOs, sendLgWebOsMediaCommand } from './lg-webos-remote'
 import { pairSamsungTv, sendSamsungKeypress } from './samsung-tizen-remote'
@@ -21,6 +23,7 @@ export interface TvRemoteHelperDeps {
   sendPhilipsJointSpaceKey?: typeof sendPhilipsJointSpaceKey
   sendVizioSmartCastKey?: typeof sendVizioSmartCastKey
   sendHomeAssistantWebhook?: typeof sendHomeAssistantWebhook
+  runAdb?: AdbRunner
 }
 
 export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
@@ -35,6 +38,7 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
   const sendPhilips = deps.sendPhilipsJointSpaceKey ?? sendPhilipsJointSpaceKey
   const sendVizio = deps.sendVizioSmartCastKey ?? sendVizioSmartCastKey
   const sendHaWebhook = deps.sendHomeAssistantWebhook ?? sendHomeAssistantWebhook
+  const runAdb = deps.runAdb ?? runAdbCommand
 
   return http.createServer(async (req, res) => {
   setCors(res)
@@ -131,6 +135,21 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
         timeoutMs: optionalBodyNumber(body.timeoutMs),
       })
       sendJson(res, 200, { ok: true, platform: 'samsung-tizen-beta' })
+      return
+    }
+
+    if (req.method === 'POST' && url.pathname === '/adb/connect') {
+      const body = await readJson(req)
+      await runAdb(adbConnectArgs(String(body.host ?? '')))
+      sendJson(res, 200, { ok: true, platform: 'adb-helper-advanced' })
+      return
+    }
+
+    if (req.method === 'POST' && url.pathname === '/adb/media-key') {
+      const body = await readJson(req)
+      const key = assertAdbMediaKey(String(body.key ?? ''))
+      await runAdb(adbMediaKeyForDeviceArgs(String(body.host ?? ''), key))
+      sendJson(res, 200, { ok: true, platform: 'adb-helper-advanced', key })
       return
     }
 
@@ -296,6 +315,26 @@ function readJson(req: http.IncomingMessage): Promise<Record<string, unknown>> {
       }
     })
     req.on('error', reject)
+  })
+}
+
+interface AdbRunResult {
+  stdout: string
+  stderr: string
+}
+
+type AdbRunner = (args: string[]) => Promise<AdbRunResult>
+
+function runAdbCommand(args: string[]): Promise<AdbRunResult> {
+  return new Promise((resolve, reject) => {
+    const child = execFile('adb', args, { timeout: 4000, windowsHide: true }, (error, stdout, stderr) => {
+      if (error) {
+        reject(new Error('ADB command failed or timed out', { cause: error }))
+        return
+      }
+      resolve({ stdout, stderr })
+    })
+    child.stdin?.end()
   })
 }
 

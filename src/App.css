@@ -773,7 +773,21 @@ button:active {
 }
 
 .remote-button-row.triple {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+}
+
+.field-label.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 248, 231, 0.055);
+}
+
+.field-label.checkbox-row input {
+  width: auto;
+  min-height: 0;
 }
 
 .remote-button-row button {
