@@ -2,12 +2,11 @@ import http from 'node:http'
 import { afterEach, describe, expect, it } from 'vitest'
 import { createTvRemoteHelperServer } from './tv-remote-helper'
 
-let server: http.Server | undefined
+const servers: http.Server[] = []
 
 afterEach(async () => {
-  if (!server) return
-  await new Promise<void>((resolve, reject) => server?.close((error) => error ? reject(error) : resolve()))
-  server = undefined
+  const closing = servers.splice(0).map((server) => new Promise<void>((resolve, reject) => server.close((error) => error ? reject(error) : resolve())))
+  await Promise.all(closing)
 })
 
 describe('TV remote helper endpoints', () => {
@@ -63,14 +62,96 @@ describe('TV remote helper endpoints', () => {
     await expect(postJson(`${baseUrl}/vizio/key`, { host: '127.0.0.1', key: 'play' })).resolves.toMatchObject({ ok: true })
     expect(calls).toEqual(['lg-pair', 'lg-play', 'samsung-pair', 'samsung-KEY_PLAY', 'sony-info', 'sony-ircc', 'philips-PlayPause', 'vizio-play'])
   })
+
+  it('posts Home Assistant webhook test and play payloads once through the local helper', async () => {
+    const webhookCalls: Array<{ body: Record<string, unknown>; headers: http.IncomingHttpHeaders }> = []
+    const webhook = await startWebhookReceiver(async (req, res) => {
+      webhookCalls.push({ body: await readRequestJson(req), headers: req.headers })
+      res.writeHead(204)
+      res.end()
+    })
+    const baseUrl = await startHelper()
+
+    await expect(postJson(`${baseUrl}/home-assistant/webhook`, {
+      webhookUrl: `${webhook}/api/webhook/secret-id`,
+      roomId: 'ROOM1',
+      countdownId: 'countdown-1',
+      issuedAt: '2026-05-05T12:00:00.000Z',
+      test: true,
+    })).resolves.toMatchObject({ ok: true, platform: 'home-assistant-webhook', status: 204 })
+    await expect(postJson(`${baseUrl}/home-assistant/webhook`, {
+      webhookUrl: `${webhook}/api/webhook/secret-id`,
+      roomId: 'ROOM1',
+      countdownId: 'countdown-2',
+      issuedAt: '2026-05-05T12:00:01.000Z',
+    })).resolves.toMatchObject({ ok: true, platform: 'home-assistant-webhook', status: 204 })
+
+    expect(webhookCalls).toHaveLength(2)
+    expect(webhookCalls[0].body).toMatchObject({ type: 'watch_sync_test', room_id: 'ROOM1', countdown_id: 'countdown-1', issued_at: '2026-05-05T12:00:00.000Z' })
+    expect(webhookCalls[1].body).toMatchObject({ type: 'watch_sync_go', room_id: 'ROOM1', countdown_id: 'countdown-2', issued_at: '2026-05-05T12:00:01.000Z' })
+    expect(webhookCalls[0].headers.authorization).toBeUndefined()
+  })
+
+  it('rejects non-http Home Assistant webhook URLs without echoing secret URLs', async () => {
+    const baseUrl = await startHelper()
+    const secretUrl = 'file:///tmp/secret-webhook-id'
+
+    const response = await postJson(`${baseUrl}/home-assistant/webhook`, { webhookUrl: secretUrl })
+
+    expect(response).toMatchObject({ ok: false })
+    expect(String(response.error)).toMatch(/http/i)
+    expect(JSON.stringify(response)).not.toContain(secretUrl)
+  })
+
+  it('returns a safe Home Assistant webhook failure without echoing the secret URL', async () => {
+    const webhook = await startWebhookReceiver(async (_req, res) => {
+      res.writeHead(500)
+      res.end('boom secret body')
+    })
+    const baseUrl = await startHelper()
+    const secretUrl = `${webhook}/api/webhook/super-secret-id`
+
+    const response = await postJson(`${baseUrl}/home-assistant/webhook`, { webhookUrl: secretUrl })
+
+    expect(response).toMatchObject({ ok: false })
+    expect(String(response.error)).toMatch(/Home Assistant webhook returned 500/)
+    expect(JSON.stringify(response)).not.toContain(secretUrl)
+    expect(JSON.stringify(response)).not.toContain('super-secret-id')
+  })
 })
 
 async function startHelper(deps?: Parameters<typeof createTvRemoteHelperServer>[0]): Promise<string> {
-  server = createTvRemoteHelperServer(deps)
-  await new Promise<void>((resolve) => server?.listen(0, '127.0.0.1', resolve))
+  const server = createTvRemoteHelperServer(deps)
+  servers.push(server)
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const address = server.address()
   if (!address || typeof address === 'string') throw new Error('helper server did not expose a TCP port')
   return `http://127.0.0.1:${address.port}`
+}
+
+async function startWebhookReceiver(listener: http.RequestListener): Promise<string> {
+  const server = http.createServer(listener)
+  servers.push(server)
+  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
+  const address = server.address()
+  if (!address || typeof address === 'string') throw new Error('webhook server did not expose a TCP port')
+  return `http://127.0.0.1:${address.port}`
+}
+
+function readRequestJson(req: http.IncomingMessage): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    let body = ''
+    req.setEncoding('utf8')
+    req.on('data', (chunk) => { body += chunk })
+    req.on('end', () => {
+      try {
+        resolve(body.trim() ? JSON.parse(body) as Record<string, unknown> : {})
+      } catch (error) {
+        reject(error)
+      }
+    })
+    req.on('error', reject)
+  })
 }
 
 async function fetchJson(url: string): Promise<Record<string, unknown>> {

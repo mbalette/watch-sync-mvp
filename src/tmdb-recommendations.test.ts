@@ -5,6 +5,7 @@ import {
   createTmdbDiscoverResponse,
   createTmdbRecommendationResponse,
   mapTmdbSearchItem,
+  providerIdsForRecommendationProviders,
   TMDB_PROVIDER_IDS,
 } from './tmdb-recommendations'
 
@@ -16,7 +17,12 @@ describe('TMDB recommendation API helpers', () => {
     expect(url.searchParams.get('include_adult')).toBe('false')
     expect(url.searchParams.get('region')).toBe('US')
     expect(url.searchParams.get('watch_region')).toBe('US')
+    expect(url.searchParams.get('requested_watch_providers')).toBe('8|1899')
     expect(TMDB_PROVIDER_IDS.Netflix).toBe(8)
+  })
+
+  it('uses canonical provider slugs or legacy labels for TMDB provider ids', () => {
+    expect(providerIdsForRecommendationProviders(['netflix', 'Max', 'apple-tv-plus', 'Unknown'])).toEqual([8, 1899, 350])
   })
 
   it('maps movie/tv results and rejects person or blank title results', () => {
@@ -28,7 +34,7 @@ describe('TMDB recommendation API helpers', () => {
       mediaType: 'tv',
       title: 'Andor',
       year: '2022',
-      ratingLabel: 'TMDB',
+      ratingLabel: 'TMDB User Rating',
       ratingValue: '8.2',
     })
   })

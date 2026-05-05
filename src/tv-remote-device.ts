@@ -1,10 +1,11 @@
-export type LinkedTvPlatform = 'roku' | 'lg_webos' | 'samsung' | 'sony_bravia' | 'philips_jointspace' | 'vizio_smartcast'
+export type LinkedTvPlatform = 'roku' | 'lg_webos' | 'samsung' | 'sony_bravia' | 'philips_jointspace' | 'vizio_smartcast' | 'home_assistant_webhook'
 
 export interface LinkedTvDevice {
   platform: LinkedTvPlatform
   label: string
   host: string
   url?: string
+  webhookUrl?: string
   helperUrl: string
   clientKey?: string
   token?: string
@@ -31,6 +32,7 @@ export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; s
   { id: 'sony_bravia', label: 'Sony / Bravia', status: 'Beta helper', requiresSecret: true },
   { id: 'philips_jointspace', label: 'Philips JointSpace', status: 'Experimental helper' },
   { id: 'vizio_smartcast', label: 'Vizio SmartCast', status: 'Experimental helper', requiresSecret: true },
+  { id: 'home_assistant_webhook', label: 'Home Assistant webhook', status: 'Advanced local bridge' },
 ]
 
 export function loadLinkedTvDevice(storage: Storage = localStorage): LinkedTvDevice | null {
@@ -55,6 +57,7 @@ export function normalizeLinkedTvDevice(device: Partial<LinkedTvDevice>): Linked
     host: trimOr(device.host, ''),
     helperUrl: trimOr(device.helperUrl, 'http://127.0.0.1:8790'),
     url: optionalTrim(device.url),
+    webhookUrl: optionalTrim(device.webhookUrl),
     clientKey: optionalTrim(device.clientKey),
     token: optionalTrim(device.token),
     psk: optionalTrim(device.psk),
@@ -67,6 +70,7 @@ export function normalizeLinkedTvDevice(device: Partial<LinkedTvDevice>): Linked
 
 export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {
   const device = normalizeLinkedTvDevice(deviceInput)
+  if (device.platform === 'home_assistant_webhook') return buildHomeAssistantWebhookRequest(device, true)
   requireHost(device)
   switch (device.platform) {
     case 'roku':
@@ -86,6 +90,7 @@ export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperReque
 
 export function buildDevicePlayRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {
   const device = normalizeLinkedTvDevice(deviceInput)
+  if (device.platform === 'home_assistant_webhook') return buildHomeAssistantWebhookRequest(device, false)
   requireHost(device)
   switch (device.platform) {
     case 'roku':
@@ -119,6 +124,17 @@ function isLinkedTvPlatform(value: unknown): value is LinkedTvPlatform {
 
 function requireHost(device: LinkedTvDevice): void {
   if (!device.host.trim()) throw new Error('Enter a TV IP address or hostname first.')
+}
+
+function buildHomeAssistantWebhookRequest(device: LinkedTvDevice, test: boolean): HelperRequestSpec {
+  if (!device.webhookUrl) {
+    return { path: '', method: 'POST', unsafeReason: 'Enter a Home Assistant webhook URL first. Manual countdown still works.' }
+  }
+  return {
+    path: '/home-assistant/webhook',
+    method: 'POST',
+    body: compactBody({ webhookUrl: device.webhookUrl, test: test ? true : undefined }),
+  }
 }
 
 function compactBody(body: Record<string, unknown>): Record<string, unknown> {

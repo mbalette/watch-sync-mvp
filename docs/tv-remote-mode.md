@@ -1,6 +1,8 @@
 # TV Remote Mode feasibility and MVP
 
-Verdict: Roku-first generic remote control is feasible as the first TV Remote Mode proof path, but **not** universal smart-TV streaming sync.
+Verdict: Roku-first generic remote control is technically feasible as a native/helper proof path, but public Roku mobile ECP launch is **Build later** until Roku resolves contradictory official guidance about third-party mobile ECP use. Treat Roku control as internal/TestFlight beta-only if the product accepts that policy ambiguity. It is **not** universal smart-TV streaming sync.
+
+Content discovery/provider policy lives separately in `docs/data-provider-strategy.md`; do not couple provider availability claims to TV Remote Mode control architecture.
 
 ## Honest product claim
 
@@ -15,6 +17,10 @@ Settings copy:
 Compatibility disclaimer:
 
 > Manual sync works with every streaming service because you control the TV yourself. Remote Mode is best-effort and only sends generic remote keys on supported devices after you open the show and pause it. It does not choose Netflix/Hulu/Disney/Prime/Max content, seek inside native TV apps, or guarantee every app will obey Play/Pause.
+
+iOS/Roku policy update:
+
+> Apple-side native iOS known-IP Roku control is feasible with public APIs, Local Network permission, and narrow ATS/local HTTP exceptions. Public launch waits on Roku policy clarification. Beta scope is manual IP, foreground-only, `GET /query/device-info`, exactly one `POST /keypress/Play` at countdown GO, local-only Roku metadata, no backend TV connection or credential storage, and manual countdown fallback always.
 
 Avoid:
 
@@ -68,7 +74,7 @@ Remote commands are best-effort. Even when a device accepts a generic keypress, 
 
 | Target | Generic Play/Pause possible? | Official? | Native iOS feasible? | PWA feasible? | Local helper feasible? | Pairing/auth | Exact command/protocol | Hardware needed | Allowed product claim | MVP priority |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Roku / Roku TV | Yes, generic remote keys. Current MVP sends `Play` only. | Official ECP. | Yes: LAN HTTP + local-network permission. | Unreliable from hosted HTTPS PWA. | Yes. | Usually no app pairing; Roku network/mobile control setting must allow. | `GET /query/device-info`; `POST /keypress/Play` on port `8060`. | Roku player/Roku TV. | Supported Roku devices can receive a best-effort Play key after user stages content. | Build now / Phase 1. |
+| Roku / Roku TV | Yes, generic remote keys. Current MVP sends `Play` only. Do not claim `Pause` or `PlayPause`. | Official docs conflict on third-party mobile ECP use; public launch is policy-blocked until clarified. | Yes: known-IP LAN HTTP + Local Network permission, foreground-only. | Unreliable from hosted HTTPS PWA. | Yes. | Usually no app pairing; Roku network/mobile control setting must allow. | `GET /query/device-info`; exactly one `POST /keypress/Play` on port `8060` at GO. | Roku player/Roku TV plus real-device iOS ATS/local-network matrix. | Supported Roku devices may receive a best-effort Play key after user stages content; no app launch, timestamp read, background execution, or universal TV claim. | Build later for public launch; internal/TestFlight beta only if policy risk accepted. |
 | LG webOS | Likely yes for media controls after pairing. | Connect SDK official; raw SSAP/WebSocket details are semi-official/implementation-specific. | Yes, with pairing/token storage. | Weak/unreliable. | Yes. | TV prompt/client key. | Common SSAP commands include `ssap://media.controls/play` and `pause`; hardware validation required. | LG webOS TV. | Some LG webOS TVs may support generic play/pause after pairing. | Next / Phase 2. |
 | Samsung Tizen / Smart TV | Possible on many models. | LAN WebSocket remote protocol is unofficial for external apps; official remote docs target TV apps. | Feasible but brittle. | Weak/unreliable. | Yes. | TV approval/token on supported models. | Unofficial WebSocket `ms.remote.control`, keys such as `KEY_PLAY`, `KEY_PAUSE`, `KEY_PLAYPAUSE`. | Samsung TV test matrix. | Experimental Samsung beta may send generic keys after local TV approval. | Beta / Phase 3. |
 | Fire TV / Firestick / Fire OS | Possible via ADB media key events. | ADB/key events official developer tooling, not consumer remote product API. | Not practical directly. | No. | Yes, advanced helper only. | Developer options, ADB pairing/RSA auth. | `adb shell input keyevent KEYCODE_MEDIA_PLAY_PAUSE` or keycodes `85`, `126`, `127`. | Fire TV with debugging enabled + helper machine. | Advanced helper mode only; not mainstream consumer setup. | Research/helper / Phase 4. |
@@ -101,7 +107,7 @@ Manual countdown remains available in every error state.
 
 ## Build roadmap
 
-1. **Phase 1 — Roku native iOS + helper hardening**: manual IP entry, optional SSDP discovery, Local Network permission copy, `device-info` probe, one-shot `Play` at GO, no risky retry, mock helper tests plus one real Roku hardware matrix.
+1. **Phase 1 — Roku native iOS/helper hardening, beta-only until Roku policy clears**: manual IP entry first, no SSDP, foreground-only, Local Network permission copy, narrow ATS/local-IP HTTP exceptions, `device-info` probe, local-only Roku metadata, exactly one `Play` at GO, no risky retry, no app launch/media-state/timestamp reads/background claims, manual countdown fallback, mock helper tests plus real Roku/iOS hardware matrix.
 2. **Phase 2 — LG webOS**: pairing prompt, client-key storage, `play`/`pause` media controls behind hardware validation, app-by-app caveat.
 3. **Phase 3 — Samsung beta**: clearly labeled unofficial/beta WebSocket adapter, approval/token persistence, limited hardware matrix, no official Samsung claim.
 4. **Phase 4 — Cast/Fire/Android research/helper**: Cast only for sessions Watch Sync controls; ADB helper for Fire/Android as advanced/dev-mode path, not consumer default.
@@ -155,7 +161,7 @@ Production data plan:
 
 The PWA now includes a local linked-device manager inside `TV Remote Mode`:
 
-- Platform picker: Roku, LG webOS, Samsung/Tizen, Sony/Bravia, Philips JointSpace, Vizio SmartCast.
+- Platform picker: Roku, LG webOS, Samsung/Tizen, Sony/Bravia, Philips JointSpace, Vizio SmartCast, Home Assistant webhook.
 - Helper URL field defaults to `http://127.0.0.1:8790`.
 - Platform-specific fields stay local in browser storage:
   - LG `clientKey`
@@ -163,6 +169,7 @@ The PWA now includes a local linked-device manager inside `TV Remote Mode`:
   - Sony `psk` and Play `irccCode`
   - Philips JointSpace API version
   - Vizio auth token
+  - Home Assistant webhook URL
 - Buttons:
   - `Save local`
   - `Pair/Test`
@@ -173,9 +180,65 @@ The PWA now includes a local linked-device manager inside `TV Remote Mode`:
   - Samsung: `/samsung/keypress` with `KEY_PLAY`
   - Sony: `/sony/ircc` after a Play IRCC code is provided
   - Vizio: `/vizio/key` with `play`
+  - Home Assistant webhook: `/home-assistant/webhook` posts one local `watch_sync_go` event to the user-provided HA webhook URL.
   - Philips: automatic GO is blocked because `PlayPause` is a risky toggle; manual countdown remains the fallback.
 
-The room backend still only coordinates room/countdown/state. Device hostnames, pairing tokens, PSKs, IRCC codes, and auth tokens are not sent to the realtime backend.
+The room backend still only coordinates room/countdown/state. Device hostnames, pairing tokens, PSKs, IRCC codes, auth tokens, and Home Assistant webhook URLs are not sent to the realtime backend.
+
+## Home Assistant advanced local bridge
+
+Home Assistant webhook mode is an advanced bridge for users already running Home Assistant locally. It is not a universal TV-control claim: compatibility depends on the user's HA integration, media device, active app, focus state, account/app behavior, and network. Manual countdown remains the reliable fallback.
+
+Recommended shape:
+
+1. Run the Watch Sync local helper on the same LAN.
+2. Create a Home Assistant webhook automation with `local_only: true` and a random webhook id.
+3. In Watch Sync TV Remote Mode, choose `Home Assistant webhook — Advanced local bridge` and enter the full local webhook URL, for example `http://homeassistant.local:8123/api/webhook/REPLACE_WITH_RANDOM_ID`.
+4. At GO, Watch Sync sends one POST to the local helper, and the helper sends one POST to Home Assistant. There is a short timeout and no blind retry.
+
+Sample Home Assistant YAML:
+
+```yaml
+script:
+  watch_sync_play:
+    alias: Watch Sync Play
+    sequence:
+      - action: media_player.media_play
+        target:
+          entity_id: media_player.living_room_tv
+
+automation:
+  - alias: Watch Sync GO webhook
+    triggers:
+      - trigger: webhook
+        webhook_id: REPLACE_WITH_RANDOM_ID
+        allowed_methods:
+          - POST
+        local_only: true
+    actions:
+      - action: script.watch_sync_play
+```
+
+Payloads sent to Home Assistant are narrow JSON events such as:
+
+```json
+{
+  "type": "watch_sync_go",
+  "room_id": "ROOM1",
+  "countdown_id": "countdown-1",
+  "issued_at": "2026-05-05T12:00:00.000Z",
+  "client_ts": "2026-05-05T12:00:00.100Z"
+}
+```
+
+Security and truth constraints:
+
+- Do not put Home Assistant long-lived access tokens in the PWA.
+- Do not put HA URLs, tokens, or entity IDs in realtime/backend room state.
+- The helper does not accept arbitrary headers or bearer tokens for this bridge.
+- The helper validates only `http://` and `https://` webhook URLs and returns safe errors without echoing the secret webhook URL.
+- Prefer local-only webhooks. Users customize HA scripts/actions on their own HA instance.
+- No Apple TV direct control, private APIs, native streaming-app title selection, or timestamp seek is implied by this bridge.
 
 ## Expanded adapter build plan beyond Roku
 

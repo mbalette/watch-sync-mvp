@@ -20,6 +20,7 @@ export interface TvRemoteHelperDeps {
   sendSonyIrcc?: typeof sendSonyIrcc
   sendPhilipsJointSpaceKey?: typeof sendPhilipsJointSpaceKey
   sendVizioSmartCastKey?: typeof sendVizioSmartCastKey
+  sendHomeAssistantWebhook?: typeof sendHomeAssistantWebhook
 }
 
 export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
@@ -33,6 +34,7 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
   const sendSony = deps.sendSonyIrcc ?? sendSonyIrcc
   const sendPhilips = deps.sendPhilipsJointSpaceKey ?? sendPhilipsJointSpaceKey
   const sendVizio = deps.sendVizioSmartCastKey ?? sendVizioSmartCastKey
+  const sendHaWebhook = deps.sendHomeAssistantWebhook ?? sendHomeAssistantWebhook
 
   return http.createServer(async (req, res) => {
   setCors(res)
@@ -176,6 +178,19 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
       return
     }
 
+    if (req.method === 'POST' && url.pathname === '/home-assistant/webhook') {
+      const body = await readJson(req)
+      const result = await sendHaWebhook({
+        webhookUrl: String(body.webhookUrl ?? ''),
+        roomId: optionalBodyString(body.roomId),
+        countdownId: optionalBodyString(body.countdownId),
+        issuedAt: optionalBodyString(body.issuedAt),
+        test: body.test === true,
+      })
+      sendJson(res, 200, { ok: true, platform: 'home-assistant-webhook', status: result.status })
+      return
+    }
+
     sendJson(res, 404, { ok: false, error: 'Not found' })
   } catch (error) {
     sendJson(res, 400, { ok: false, error: error instanceof Error ? error.message : 'TV remote helper error' })
@@ -188,6 +203,69 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   server.listen(port, '127.0.0.1', () => {
     console.log(`Watch Sync TV Remote helper listening on http://127.0.0.1:${port}`)
   })
+}
+
+interface HomeAssistantWebhookRequest {
+  webhookUrl: string
+  roomId?: string
+  countdownId?: string
+  issuedAt?: string
+  test?: boolean
+}
+
+interface HomeAssistantWebhookResult {
+  status: number
+}
+
+export async function sendHomeAssistantWebhook(input: HomeAssistantWebhookRequest): Promise<HomeAssistantWebhookResult> {
+  const webhookUrl = parseSafeHttpWebhookUrl(input.webhookUrl)
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 3500)
+  try {
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: input.test ? 'watch_sync_test' : 'watch_sync_go',
+        room_id: input.roomId,
+        countdown_id: input.countdownId,
+        issued_at: input.issuedAt,
+        client_ts: new Date().toISOString(),
+      }),
+      signal: controller.signal,
+    })
+
+    if (response.status < 200 || response.status >= 400) {
+      throw new Error(`Home Assistant webhook returned ${response.status}`)
+    }
+    return { status: response.status }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') throw new Error('Home Assistant webhook timed out', { cause: error })
+    if (error instanceof Error && error.message.startsWith('Home Assistant webhook returned ')) throw error
+    if (error instanceof Error && error.message.startsWith('Home Assistant webhook URL ')) throw error
+    throw new Error('Home Assistant webhook request failed', { cause: error })
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
+function parseSafeHttpWebhookUrl(value: string): string {
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    throw new Error('Home Assistant webhook URL must be a valid http:// or https:// URL')
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    throw new Error('Home Assistant webhook URL must use http:// or https://')
+  }
+  if (!parsed.hostname) {
+    throw new Error('Home Assistant webhook URL must include a hostname')
+  }
+  if (parsed.username || parsed.password) {
+    throw new Error('Home Assistant webhook URL must not include embedded credentials')
+  }
+  return parsed.toString()
 }
 
 function setCors(res: http.ServerResponse) {

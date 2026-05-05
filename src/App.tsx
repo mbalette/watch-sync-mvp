@@ -29,11 +29,20 @@ import {
   TV_PLATFORM_OPTIONS,
   type LinkedTvDevice,
 } from './tv-remote-device'
-import { buildRecommendationDiscoverApiUrl, buildRecommendationSearchApiUrl, filterRecommendations, RECOMMENDATION_PROVIDERS } from './recommendations'
+import {
+  buildRecommendationDiscoverApiUrl,
+  buildRecommendationSearchApiUrl,
+  filterRecommendations,
+  getRecommendationProviderLabel,
+  normalizeRecommendationProviderSlugs,
+  normalizeRecommendationRegion,
+  RECOMMENDATION_PROVIDER_OPTIONS,
+} from './recommendations'
 
 const LOCAL_PARTICIPANT_KEY = 'watch-sync.localParticipant'
 const CURRENT_ROOM_KEY = 'watch-sync.currentRoom'
 const RECOMMENDATION_PROVIDERS_KEY = 'watch-sync.recommendationProviders'
+const RECOMMENDATION_REGION_KEY = 'watch-sync.recommendationRegion'
 const storageKey = (roomId: string) => `watch-sync.room.${roomId}`
 const realtimeUrl = import.meta.env.VITE_REALTIME_URL || 'ws://127.0.0.1:8787'
 
@@ -44,7 +53,7 @@ function loadRecommendationProviders(): string[] {
   try {
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((provider): provider is string => typeof provider === 'string' && (RECOMMENDATION_PROVIDERS as readonly string[]).includes(provider))
+    return normalizeRecommendationProviderSlugs(parsed.filter((provider): provider is string => typeof provider === 'string'))
   } catch {
     localStorage.removeItem(RECOMMENDATION_PROVIDERS_KEY)
     return []
@@ -52,11 +61,20 @@ function loadRecommendationProviders(): string[] {
 }
 
 function persistRecommendationProviders(providers: string[]) {
-  if (providers.length === 0) {
+  const providerSlugs = normalizeRecommendationProviderSlugs(providers)
+  if (providerSlugs.length === 0) {
     localStorage.removeItem(RECOMMENDATION_PROVIDERS_KEY)
     return
   }
-  localStorage.setItem(RECOMMENDATION_PROVIDERS_KEY, JSON.stringify(providers))
+  localStorage.setItem(RECOMMENDATION_PROVIDERS_KEY, JSON.stringify(providerSlugs))
+}
+
+function loadRecommendationRegion(): string {
+  return normalizeRecommendationRegion(localStorage.getItem(RECOMMENDATION_REGION_KEY) ?? 'US')
+}
+
+function persistRecommendationRegion(region: string) {
+  localStorage.setItem(RECOMMENDATION_REGION_KEY, normalizeRecommendationRegion(region))
 }
 
 function RecommendationPoster({ item }: { item: WatchRecommendation }) {
@@ -130,6 +148,7 @@ function App() {
   const [chatDraft, setChatDraft] = useState('')
   const [recommendationQuery, setRecommendationQuery] = useState('')
   const [selectedRecommendationProviders, setSelectedRecommendationProviders] = useState<string[]>(loadRecommendationProviders)
+  const [recommendationRegion, setRecommendationRegion] = useState(loadRecommendationRegion)
   const [recommendationMediaType, setRecommendationMediaType] = useState<'all' | 'movie' | 'tv'>('all')
   const [recommendationCategory, setRecommendationCategory] = useState<'popular' | 'new' | 'recent'>('popular')
   const [liveRecommendationResults, setLiveRecommendationResults] = useState<WatchRecommendation[]>([])
@@ -165,14 +184,18 @@ function App() {
   const selectedWatchEvent = room ? room.eventLog.findLast((event) => event.type === 'recommendation_selected') : undefined
   const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders, { mediaType: recommendationMediaType, category: recommendationCategory })
   const recommendationResults = recommendationSource === 'tmdb' ? liveRecommendationResults : mockRecommendationResults
+  const selectedRecommendationProviderLabels = selectedRecommendationProviders.map((provider) => getRecommendationProviderLabel(provider))
   const pairedExtensions = room ? Object.values(room.extensions ?? {}) : []
   const localPlayback = room && currentParticipantId ? room.playbackByParticipant?.[currentParticipantId] : undefined
   const readyCount = room ? people.filter((person) => room.readyState[person.id] === 'ready').length : 0
   const setupOpen = Boolean(room && (room.targetTimestamp === '00:00' || showSetupSheet))
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
-  const tvRemoteConfigured = linkedTvDevice.host.trim().length > 0
+  const tvRemoteConfigured = linkedTvDevice.platform === 'home_assistant_webhook'
+    ? Boolean(linkedTvDevice.webhookUrl?.trim())
+    : linkedTvDevice.host.trim().length > 0
   const tvRemoteRoadmap = [
     { label: 'Roku', status: 'Live now', note: 'Generic Play key via local helper/native path.' },
+    { label: 'Home Assistant webhook', status: 'Advanced local bridge', note: 'Local-only HA webhook can trigger a user script/action; no HA tokens in Watch Sync servers.' },
     { label: 'LG webOS', status: 'Helper adapter', note: 'Experimental pairing + SSAP play/pause endpoints; hardware validation required.' },
     { label: 'Samsung', status: 'Helper beta', note: 'Unofficial LAN KEY_PLAY endpoint after TV approval; model variance expected.' },
     { label: 'Cast', status: 'Session only', note: 'Can control Cast sessions Watch Sync starts/joins, not native TV apps.' },
@@ -259,7 +282,10 @@ function App() {
     const next = normalizeLinkedTvDevice({ ...linkedTvDevice, ...patch })
     setLinkedTvDevice(next)
     saveLinkedTvDevice(next)
-    setTvRemoteStatus(`${next.label} saved locally. Room backend still only coordinates countdown; this helper controls your TV on your LAN.`)
+    const storageCopy = next.platform === 'home_assistant_webhook'
+      ? 'Home Assistant webhook URL saved locally in this browser/helper flow. Watch Sync servers do not store HA credentials, entity IDs, or webhook URLs.'
+      : `${next.label} saved locally. Room backend still only coordinates countdown; this helper controls your TV on your LAN.`
+    setTvRemoteStatus(storageCopy)
   }, [linkedTvDevice])
 
   const testLinkedDevice = useCallback(async () => {
@@ -267,7 +293,8 @@ function App() {
     saveLinkedTvDevice(savedDevice)
     setTvRemoteStatus(`Testing ${savedDevice.label} via local helper...`)
     try {
-      const payload = await runHelperRequest(buildDeviceTestRequest(savedDevice))
+      const request = buildDeviceTestRequest(savedDevice)
+      const payload = await runHelperRequest(request)
       const updates: Partial<LinkedTvDevice> = { lastTestedAt: nowIso() }
       if (savedDevice.platform === 'lg_webos' && typeof payload?.clientKey === 'string') updates.clientKey = payload.clientKey
       if (savedDevice.platform === 'samsung' && typeof payload?.token === 'string') updates.token = payload.token
@@ -280,19 +307,37 @@ function App() {
 
   const sendLinkedTvPlay = useCallback(async (source: 'manual' | 'countdown' = 'manual') => {
     const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
-    if (!savedDevice.host.trim()) {
-      setTvRemoteStatus('Link a supported TV/device before sending Play. Manual countdown still works.')
+    const missingLocalConfig = savedDevice.platform === 'home_assistant_webhook'
+      ? !savedDevice.webhookUrl?.trim()
+      : !savedDevice.host.trim()
+    if (missingLocalConfig) {
+      setTvRemoteStatus(savedDevice.platform === 'home_assistant_webhook'
+        ? 'Add a Home Assistant webhook URL before sending GO. Manual countdown still works.'
+        : 'Link a supported TV/device before sending Play. Manual countdown still works.')
       return
     }
     saveLinkedTvDevice(savedDevice)
-    setTvRemoteStatus(`Sending one ${savedDevice.label} Play command via local helper...`)
+    setTvRemoteStatus(savedDevice.platform === 'home_assistant_webhook'
+      ? 'Sending one Home Assistant webhook GO via local helper...'
+      : `Sending one ${savedDevice.label} Play command via local helper...`)
     try {
-      await runHelperRequest(buildDevicePlayRequest(savedDevice))
-      setTvRemoteStatus(`${savedDevice.label} Play sent (${source}). This is a generic remote command only; use manual fallback if the TV app ignores it.`)
+      const request = buildDevicePlayRequest(savedDevice)
+      if (savedDevice.platform === 'home_assistant_webhook') {
+        request.body = {
+          ...(request.body ?? {}),
+          roomId: room?.roomId,
+          countdownId: String(room?.countdownState.startedAt ?? room?.countdownState.startsAtEpochMs ?? ''),
+          issuedAt: nowIso(),
+        }
+      }
+      await runHelperRequest(request)
+      setTvRemoteStatus(savedDevice.platform === 'home_assistant_webhook'
+        ? `Home Assistant webhook GO sent (${source}). Compatibility depends on your HA automation/integration/device/app; use manual fallback if it does not play.`
+        : `${savedDevice.label} Play sent (${source}). This is a generic remote command only; use manual fallback if the TV app ignores it.`)
     } catch (error) {
       setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} Play failed. Use manual countdown.`)
     }
-  }, [linkedTvDevice, runHelperRequest])
+  }, [linkedTvDevice, room, runHelperRequest])
 
   const tick = useCallback((frequency = 660) => {
     if ('vibrate' in navigator) navigator.vibrate(frequency > 900 ? 180 : 80)
@@ -454,9 +499,17 @@ function App() {
 
 
   function toggleRecommendationProvider(provider: string) {
-    setSelectedRecommendationProviders((current) => current.includes(provider)
-      ? current.filter((item) => item !== provider)
-      : [...current, provider])
+    const providerSlug = normalizeRecommendationProviderSlugs([provider])[0]
+    if (!providerSlug) return
+    setSelectedRecommendationProviders((current) => current.includes(providerSlug)
+      ? current.filter((item) => item !== providerSlug)
+      : [...current, providerSlug])
+  }
+
+  function updateRecommendationRegion(region: string) {
+    const nextRegion = normalizeRecommendationRegion(region)
+    setRecommendationRegion(nextRegion)
+    persistRecommendationRegion(nextRegion)
   }
 
   function saveRecommendationServices() {
@@ -471,7 +524,7 @@ function App() {
         providers: selectedRecommendationProviders,
         mediaType: recommendationMediaType,
         category: recommendationCategory,
-        region: 'US',
+        region: recommendationRegion,
       }))
       const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
       if (!response.ok || payload.ok === false) {
@@ -501,7 +554,7 @@ function App() {
     }
     setRecommendationStatus('Searching TMDB via the server token proxy...')
     try {
-      const response = await fetch(buildRecommendationSearchApiUrl(query, selectedRecommendationProviders, 'US'))
+      const response = await fetch(buildRecommendationSearchApiUrl(query, selectedRecommendationProviders, recommendationRegion))
       const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
       if (!response.ok || payload.ok === false) {
         setRecommendationSource('mock')
@@ -582,7 +635,7 @@ function App() {
           providers: [],
           mediaType: recommendationMediaType,
           category: recommendationCategory,
-          region: 'US',
+          region: recommendationRegion,
         }))
         const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
         if (!response.ok || payload.ok === false) {
@@ -606,7 +659,7 @@ function App() {
 
     setRecommendationStatus('Provider filters cleared. Searching TMDB across all services...')
     try {
-      const response = await fetch(buildRecommendationSearchApiUrl(query, [], 'US'))
+      const response = await fetch(buildRecommendationSearchApiUrl(query, [], recommendationRegion))
       const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
       if (!response.ok || payload.ok === false) {
         setRecommendationSource('mock')
@@ -1001,7 +1054,7 @@ function App() {
 
           {showRecommendDrawer && (
             <div className="drawer-content recommend-panel">
-              <p>Pick the services you have, browse popular or recent TMDB listings for those providers, or search a specific title. Then send a recommendation card into the room. Rotten Tomatoes scores are licensed-only later.</p>
+              <p>Pick the services you have and your country/region, browse TMDB discovery filters, or search a specific title. Availability is best-effort and varies by country, plan, and date; ratings shown here are TMDB User Ratings. Watch Sync does not scrape provider catalogs and is not endorsed by TMDB or any streaming service.</p>
               <div className="recommendation-tabs" aria-label="Browse category">
                 {([
                   ['popular', 'Popular'],
@@ -1020,6 +1073,18 @@ function App() {
                 </select>
               </label>
               <label className="field-label compact">
+                <span>Country / region</span>
+                <select value={recommendationRegion} onChange={(event) => updateRecommendationRegion(event.target.value)} aria-label="Recommendation country or region">
+                  <option value="US">United States (US)</option>
+                  <option value="CA">Canada (CA)</option>
+                  <option value="GB">United Kingdom (GB)</option>
+                  <option value="AU">Australia (AU)</option>
+                  <option value="DE">Germany (DE)</option>
+                  <option value="FR">France (FR)</option>
+                  <option value="JP">Japan (JP)</option>
+                </select>
+              </label>
+              <label className="field-label compact">
                 <span>Search title</span>
                 <input value={recommendationQuery} onChange={(event) => setRecommendationQuery(event.target.value)} placeholder="Try The Bear, Dune, comedy..." aria-label="Search watch recommendations" />
               </label>
@@ -1031,20 +1096,20 @@ function App() {
               </div>
               <p className="mode-caveat">{recommendationStatus}</p>
               <div className="active-filter-row" aria-label="Active recommendation filters">
-                <span>Active filters: {selectedRecommendationProviders.length > 0 ? selectedRecommendationProviders.join(', ') : 'All services'} · {recommendationMediaType === 'all' ? 'Movies + shows' : recommendationMediaType === 'movie' ? 'Movies only' : 'Shows only'}</span>
+                <span>Active filters: {selectedRecommendationProviderLabels.length > 0 ? selectedRecommendationProviderLabels.join(', ') : 'All services'} · {recommendationRegion} · {recommendationMediaType === 'all' ? 'Movies + shows' : recommendationMediaType === 'movie' ? 'Movies only' : 'Shows only'}</span>
                 <button type="button" onClick={searchAllServices}>Search all services</button>
                 <button type="button" onClick={saveRecommendationServices}>Save services</button>
                 <button type="button" onClick={clearRecommendationFilters}>Clear filters</button>
               </div>
               <div className="provider-filter-row" aria-label="Streaming service filters">
-                {RECOMMENDATION_PROVIDERS.map((provider) => (
+                {RECOMMENDATION_PROVIDER_OPTIONS.map((provider) => (
                   <button
-                    key={provider}
-                    className={selectedRecommendationProviders.includes(provider) ? 'selected' : ''}
+                    key={provider.slug}
+                    className={selectedRecommendationProviders.includes(provider.slug) ? 'selected' : ''}
                     type="button"
-                    onClick={() => toggleRecommendationProvider(provider)}
+                    onClick={() => toggleRecommendationProvider(provider.slug)}
                   >
-                    {provider}
+                    {provider.label}
                   </button>
                 ))}
               </div>
@@ -1079,7 +1144,7 @@ function App() {
                   )
                 })}
               </div>
-              <p className="mode-caveat">This product uses the TMDB API but is not endorsed or certified by TMDB. Do not scrape Rotten Tomatoes or JustWatch.</p>
+              <p className="mode-caveat">Availability is best-effort TMDB provider data and can vary by country, plan, and date. TMDB ratings are TMDB User Ratings. This product uses the TMDB API but is not endorsed or certified by TMDB; Watch Sync does not scrape JustWatch, Rotten Tomatoes, IMDb, Metacritic, or provider catalogs.</p>
             </div>
           )}
         </div>
@@ -1092,14 +1157,19 @@ function App() {
             aria-expanded={showTvRemoteDrawer}
           >
             <span>TV Remote Mode</span>
-            <small>Roku-first, generic Play key</small>
+            <small>Local helper, Roku, or advanced HA bridge</small>
           </button>
 
           {showTvRemoteDrawer && (
             <div className="drawer-content tv-remote-panel">
               <p>
-                TV Remote Mode links one local device/helper for this browser. You still open the show yourself and pause at the timestamp; at GO, Watch Sync sends one generic Play command where that is safe.
+                TV Remote Mode links one local device/helper for this browser. You still open the show yourself and pause at the timestamp; at GO, Watch Sync sends one generic Play command where that is safe. Advanced Home Assistant mode posts one local webhook to your HA automation/script instead.
               </p>
+              {linkedTvDevice.platform === 'home_assistant_webhook' && (
+                <p className="mode-caveat">
+                  Home Assistant webhook is for users already running HA locally. The recommended setup is a local-only HA webhook that triggers your own script/action, such as media_player.media_play. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Compatibility depends on your HA integration, device, and streaming app; manual countdown remains the fallback.
+                </p>
+              )}
               <label className="field-label compact">
                 <span>Platform</span>
                 <select
@@ -1112,16 +1182,29 @@ function App() {
                   ))}
                 </select>
               </label>
-              <label className="field-label compact">
-                <span>TV IP / hostname</span>
-                <input
-                  value={linkedTvDevice.host}
-                  onChange={(event) => updateLinkedDevice({ host: event.target.value })}
-                  placeholder="192.168.1.42"
-                  inputMode="url"
-                  aria-label="TV IP address or hostname"
-                />
-              </label>
+              {linkedTvDevice.platform === 'home_assistant_webhook' ? (
+                <label className="field-label compact">
+                  <span>Home Assistant webhook URL</span>
+                  <input
+                    value={linkedTvDevice.webhookUrl ?? ''}
+                    onChange={(event) => updateLinkedDevice({ webhookUrl: event.target.value })}
+                    placeholder="http://homeassistant.local:8123/api/webhook/REPLACE_WITH_RANDOM_ID"
+                    inputMode="url"
+                    aria-label="Home Assistant webhook URL"
+                  />
+                </label>
+              ) : (
+                <label className="field-label compact">
+                  <span>TV IP / hostname</span>
+                  <input
+                    value={linkedTvDevice.host}
+                    onChange={(event) => updateLinkedDevice({ host: event.target.value })}
+                    placeholder="192.168.1.42"
+                    inputMode="url"
+                    aria-label="TV IP address or hostname"
+                  />
+                </label>
+              )}
               <label className="field-label compact">
                 <span>Helper URL</span>
                 <input
@@ -1132,7 +1215,7 @@ function App() {
                   aria-label="TV remote helper URL"
                 />
               </label>
-              {linkedTvDevice.platform !== 'roku' && (
+              {linkedTvDevice.platform !== 'roku' && linkedTvDevice.platform !== 'home_assistant_webhook' && (
                 <label className="field-label compact">
                   <span>Protocol URL override</span>
                   <input
@@ -1175,8 +1258,8 @@ function App() {
               )}
               <div className="remote-button-row triple">
                 <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>
-                <button type="button" onClick={testLinkedDevice}>{platformNeedsPairing(linkedTvDevice.platform) ? 'Pair/Test' : 'Test'}</button>
-                <button type="button" onClick={() => sendLinkedTvPlay('manual')}>Send Play</button>
+                <button type="button" onClick={testLinkedDevice}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Test webhook' : platformNeedsPairing(linkedTvDevice.platform) ? 'Pair/Test' : 'Test'}</button>
+                <button type="button" onClick={() => sendLinkedTvPlay('manual')}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Send GO webhook' : 'Send Play'}</button>
               </div>
               <div className="extension-status">{tvRemoteStatus}</div>
               <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">
@@ -1184,7 +1267,7 @@ function App() {
                   <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
                 ))}
               </div>
-              <p className="mode-caveat">Pairing tokens stay in this browser/helper config, not the room backend. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
+              <p className="mode-caveat">Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
             </div>
           )}
         </div>

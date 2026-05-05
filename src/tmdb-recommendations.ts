@@ -1,15 +1,12 @@
 import type { WatchRecommendation } from './domain'
+import { getRecommendationProviderLabel, getRecommendationProviderTmdbId, normalizeRecommendationProviderSlugs, normalizeRecommendationRegion, RECOMMENDATION_PROVIDER_OPTIONS } from './recommendations'
 
-export const TMDB_PROVIDER_IDS: Record<string, number> = {
-  Netflix: 8,
-  'Prime Video': 9,
-  'Disney+': 337,
-  'Paramount+': 531,
-  Max: 1899,
-  Hulu: 15,
-  Peacock: 386,
-  'Apple TV+': 350,
-}
+export const TMDB_PROVIDER_IDS: Record<string, number> = Object.fromEntries(
+  RECOMMENDATION_PROVIDER_OPTIONS.flatMap((provider) => [
+    [provider.label, provider.tmdbProviderId],
+    [provider.slug, provider.tmdbProviderId],
+  ]),
+)
 
 type TmdbEnv = {
   TMDB_READ_ACCESS_TOKEN?: string
@@ -75,14 +72,11 @@ export type TmdbRecommendationApiResponse = {
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3'
 const TMDB_ATTRIBUTION = 'This product uses the TMDB API but is not endorsed or certified by TMDB.'
 
-function normalizeRegion(region: string | undefined): string {
-  const normalized = (region ?? 'US').trim().toUpperCase().replace(/[^A-Z]/g, '')
-  return normalized.length === 2 ? normalized : 'US'
-}
+export { normalizeRecommendationRegion }
 
-function selectedProviderIds(providers: string[]): number[] {
-  return providers
-    .map((provider) => TMDB_PROVIDER_IDS[provider])
+export function providerIdsForRecommendationProviders(providers: string[]): number[] {
+  return normalizeRecommendationProviderSlugs(providers)
+    .map((provider) => getRecommendationProviderTmdbId(provider))
     .filter((id): id is number => typeof id === 'number')
 }
 
@@ -92,10 +86,10 @@ export function buildTmdbSearchUrl(query: string, providers: string[] = [], regi
   url.searchParams.set('include_adult', 'false')
   url.searchParams.set('language', 'en-US')
   url.searchParams.set('page', '1')
-  const watchRegion = normalizeRegion(region)
+  const watchRegion = normalizeRecommendationRegion(region)
   url.searchParams.set('region', watchRegion)
   url.searchParams.set('watch_region', watchRegion)
-  const ids = selectedProviderIds(providers)
+  const ids = providerIdsForRecommendationProviders(providers)
   if (ids.length > 0) url.searchParams.set('requested_watch_providers', ids.join('|'))
   return url
 }
@@ -116,7 +110,7 @@ export function mapTmdbSearchItem(item: TmdbSearchItem, providers: string[] = []
     year,
     overview: item.overview?.trim() || 'No overview available from TMDB yet.',
     providers,
-    ratingLabel: 'TMDB',
+    ratingLabel: 'TMDB User Rating',
     ratingValue: ratingValue ?? 'n/a',
     posterUrl: item.poster_path ? `https://image.tmdb.org/t/p/w500${item.poster_path}` : undefined,
     externalUrl: `https://www.themoviedb.org/${mediaType === 'movie' ? 'movie' : 'tv'}/${item.id}`,
@@ -155,9 +149,15 @@ async function fetchProvidersForItem(item: TmdbSearchItem, token: string, region
   return providerNamesForRegion(payload, region)
 }
 
+function labelsForRecommendationProviders(providers: string[]): string[] {
+  return normalizeRecommendationProviderSlugs(providers).map((provider) => getRecommendationProviderLabel(provider))
+}
+
 function matchesSelectedProviders(itemProviders: string[], selectedProviders: string[]): boolean {
-  if (selectedProviders.length === 0) return true
-  return selectedProviders.some((provider) => itemProviders.includes(provider))
+  const selectedProviderSlugs = normalizeRecommendationProviderSlugs(selectedProviders)
+  if (selectedProviderSlugs.length === 0) return true
+  const itemProviderSlugs = normalizeRecommendationProviderSlugs(itemProviders)
+  return selectedProviderSlugs.some((provider) => itemProviderSlugs.includes(provider))
 }
 
 
@@ -183,13 +183,13 @@ export function buildTmdbDiscoverUrl({ providers = [], region = 'US', mediaType 
   const normalizedMediaType = normalizeDiscoverMediaType(mediaType)
   const normalizedCategory = normalizeDiscoverCategory(category)
   const url = new URL(`/3/discover/${normalizedMediaType}`, TMDB_BASE_URL)
-  const watchRegion = normalizeRegion(region)
+  const watchRegion = normalizeRecommendationRegion(region)
   url.searchParams.set('watch_region', watchRegion)
   url.searchParams.set('with_watch_monetization_types', 'flatrate')
   url.searchParams.set('include_adult', 'false')
   url.searchParams.set('language', 'en-US')
   url.searchParams.set('page', normalizePage(page))
-  const ids = selectedProviderIds(providers)
+  const ids = providerIdsForRecommendationProviders(providers)
   if (ids.length > 0) url.searchParams.set('with_watch_providers', ids.join('|'))
 
   if (normalizedCategory === 'new') {
@@ -247,7 +247,7 @@ export async function createTmdbDiscoverResponse({
   for (const kind of mediaTypes) {
     const payload = await fetchTmdbJson(buildTmdbDiscoverUrl({ providers, region, mediaType: kind, category, page }), token) as { results?: TmdbDiscoverItem[] }
     for (const candidate of (payload.results ?? []).slice(0, mediaTypes.length === 1 ? 16 : 8)) {
-      const item = mapTmdbDiscoverItem(candidate, kind, providers)
+      const item = mapTmdbDiscoverItem(candidate, kind, labelsForRecommendationProviders(providers))
       if (item) items.push(item)
     }
   }
@@ -288,14 +288,14 @@ export async function createTmdbRecommendationResponse({
       body: { ok: false, source: 'tmdb', error: 'Enter a title or keyword to search TMDB.', attribution: TMDB_ATTRIBUTION },
     }
   }
-  const watchRegion = normalizeRegion(region)
+  const watchRegion = normalizeRecommendationRegion(region)
   const searchPayload = await fetchTmdbJson(buildTmdbSearchUrl(trimmedQuery, providers, watchRegion), token) as { results?: TmdbSearchItem[] }
   const candidates = (searchPayload.results ?? []).filter((item) => item.media_type === 'movie' || item.media_type === 'tv').slice(0, 8)
   const items: WatchRecommendation[] = []
   for (const candidate of candidates) {
     const itemProviders = await fetchProvidersForItem(candidate, token, watchRegion).catch(() => [])
     if (!matchesSelectedProviders(itemProviders, providers)) continue
-    const item = mapTmdbSearchItem(candidate, itemProviders.length > 0 ? itemProviders : providers)
+    const item = mapTmdbSearchItem(candidate, itemProviders.length > 0 ? itemProviders : labelsForRecommendationProviders(providers))
     if (item) items.push(item)
   }
   return {
