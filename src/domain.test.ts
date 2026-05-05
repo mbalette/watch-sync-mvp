@@ -75,6 +75,94 @@ describe('room reducer/event model', () => {
     expect(updated.lastSignal?.actorName).toBe('Host')
   })
 
+  it('accepts watch recommendation cards as room-visible events', () => {
+    const host = createParticipant('Host', 'host')
+    const room = createRoom(host)
+    const event: RoomEvent = {
+      type: 'recommendation_sent',
+      actorId: host.id,
+      item: {
+        source: 'mock',
+        sourceId: 'mock_1',
+        mediaType: 'movie',
+        title: 'Arrival',
+        year: '2016',
+        overview: 'A thoughtful sci-fi drama for a synchronized movie night.',
+        providers: ['Netflix', 'Prime Video'],
+        ratingLabel: 'TMDB',
+        ratingValue: '7.6',
+      },
+      note: 'Good date-night pick',
+      at: nowIso(),
+    }
+
+    expect(isRoomEvent(event)).toBe(true)
+    expect(isRoomEvent({ ...event, item: { ...event.item, providers: [] } })).toBe(true)
+    expect(isRoomEvent({ ...event, item: { ...event.item, title: '' } })).toBe(false)
+
+    const updated = applyRoomEvent(room, event)
+    expect(updated.eventLog.at(-1)).toEqual(event)
+    expect(updated.lastSignal?.type).toBe('recommendation')
+    expect(updated.lastSignal?.message).toBe('Recommended: Arrival')
+  })
+
+
+  it('accepts recommendation votes as room-visible events without changing setup', () => {
+    const host = createParticipant('Host', 'host')
+    const room = createRoom(host)
+    const event: RoomEvent = { type: 'recommendation_voted', actorId: host.id, sourceId: 'mock_1', vote: 'up', at: nowIso() }
+
+    expect(isRoomEvent(event)).toBe(true)
+    expect(isRoomEvent({ ...event, sourceId: '' })).toBe(false)
+    expect(isRoomEvent({ ...event, vote: 'maybe' })).toBe(false)
+
+    const updated = applyRoomEvent(room, event)
+    expect(updated.eventLog.at(-1)).toEqual(event)
+    expect(updated.title).toBe('')
+    expect(updated.targetTimestamp).toBe('00:00')
+    expect(updated.lastSignal?.type).toBe('recommendation')
+    expect(updated.lastSignal?.message).toContain('voted yes')
+  })
+
+  it('selects a recommendation as tonight\'s watch and resets ready/countdown state', () => {
+    const host = createParticipant('Host', 'host')
+    const guest = createParticipant('Guest', 'guest')
+    const joined = applyRoomEvent(createRoom(host), { type: 'participant_joined', participant: guest, at: nowIso() })
+    const ready = applyRoomEvent(
+      applyRoomEvent(joined, { type: 'participant_ready', participantId: host.id, ready: true, at: nowIso() }),
+      { type: 'participant_ready', participantId: guest.id, ready: true, at: nowIso() },
+    )
+    const counting = applyRoomEvent(ready, { type: 'countdown_started', actorId: host.id, startsAtEpochMs: Date.now(), durationSeconds: 3, at: nowIso() })
+    const event: RoomEvent = {
+      type: 'recommendation_selected',
+      actorId: host.id,
+      item: {
+        source: 'mock',
+        sourceId: 'mock_2',
+        mediaType: 'tv',
+        title: 'Slow Horses',
+        year: '2022',
+        overview: 'Spy series pick for tonight.',
+        providers: ['Apple TV+'],
+        ratingLabel: 'TMDB',
+        ratingValue: '8.1',
+      },
+      at: nowIso(),
+    }
+
+    expect(isRoomEvent(event)).toBe(true)
+    expect(isRoomEvent({ ...event, item: { ...event.item, title: '' } })).toBe(false)
+
+    const selected = applyRoomEvent(counting, event)
+    expect(selected.title).toBe('Slow Horses')
+    expect(selected.service).toBe('Apple TV+')
+    expect(selected.targetTimestamp).toBe('00:00')
+    expect(selected.readyState[host.id]).toBe('idle')
+    expect(selected.readyState[guest.id]).toBe('idle')
+    expect(selected.countdownState.phase).toBe('idle')
+    expect(selected.lastSignal?.message).toContain("Tonight's watch: Slow Horses")
+  })
+
   it('stores extension pairing, playback status, and errors without accepting malformed extension events', () => {
     const host = createParticipant('Host', 'host')
     const room = createRoom(host)

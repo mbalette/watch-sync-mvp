@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite",
     "dev:realtime": "tsx server/realtime.ts",
+    "dev:tv-remote": "tsx server/tv-remote-helper.ts",
     "dev:all": "concurrently -k -n vite,realtime \"npm run dev\" \"npm run dev:realtime\"",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
     "smoke:realtime": "tsx server/smoke-realtime.ts",
+    "smoke:realtime:prod": "tsx server/smoke-production-realtime.ts",
+    "deploy:realtime:cloudflare": "wrangler deploy --config wrangler.realtime.toml",
+    "build:prod": "VITE_REALTIME_URL=wss://api.kyrosdirect.tech npm run build",
     "lan:help": "tsx scripts/lan-help.ts",
     "package:extension": "tsx scripts/package-extension.ts"
   },

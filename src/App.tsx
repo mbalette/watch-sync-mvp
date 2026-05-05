@@ -11,9 +11,22 @@ import {
   type Participant,
   type RoomEvent,
   type RoomState,
+  type WatchRecommendation,
   type WatchSetup,
 } from './domain'
 import { createWebSocketRoomTransport, type RoomTransport, type TransportStatus } from './transport'
+import {
+  buildDevicePlayRequest,
+  buildDeviceTestRequest,
+  loadLinkedTvDevice,
+  normalizeLinkedTvDevice,
+  platformNeedsPairing,
+  platformNeedsSonyIrcc,
+  saveLinkedTvDevice,
+  TV_PLATFORM_OPTIONS,
+  type LinkedTvDevice,
+} from './tv-remote-device'
+import { buildRecommendationSearchApiUrl, filterRecommendations, RECOMMENDATION_PROVIDERS } from './recommendations'
 
 const LOCAL_PARTICIPANT_KEY = 'watch-sync.localParticipant'
 const CURRENT_ROOM_KEY = 'watch-sync.currentRoom'
@@ -71,11 +84,22 @@ function App() {
   const [copyStatus, setCopyStatus] = useState('')
   const [showSetupSheet, setShowSetupSheet] = useState(false)
   const [showLaptopDrawer, setShowLaptopDrawer] = useState(false)
+  const [showTvRemoteDrawer, setShowTvRemoteDrawer] = useState(false)
+  const [showRecommendDrawer, setShowRecommendDrawer] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [chatDraft, setChatDraft] = useState('')
+  const [recommendationQuery, setRecommendationQuery] = useState('')
+  const [selectedRecommendationProviders, setSelectedRecommendationProviders] = useState<string[]>([])
+  const [liveRecommendationResults, setLiveRecommendationResults] = useState<WatchRecommendation[]>([])
+  const [recommendationStatus, setRecommendationStatus] = useState('Showing a safe mock catalog. Live TMDB search is optional once a server token is configured.')
+  const [recommendationSource, setRecommendationSource] = useState<'mock' | 'tmdb'>('mock')
+  const [linkedTvDevice, setLinkedTvDevice] = useState<LinkedTvDevice>(() => loadLinkedTvDevice() ?? normalizeLinkedTvDevice({ platform: 'roku' }))
+  const [tvRemoteStatus, setTvRemoteStatus] = useState('No linked TV yet. Choose a platform, enter local helper details, then save/test.')
   const [countdownText, setCountdownText] = useState('3')
   const [transportStatus, setTransportStatus] = useState<TransportStatus>('idle')
   const transportRef = useRef<RoomTransport | null>(null)
+  const autoCountdownDispatchKeyRef = useRef('')
+  const playNowDispatchKeyRef = useRef('')
 
   const [localParticipant, setLocalParticipant] = useState<Participant | null>(() => {
     const raw = sessionStorage.getItem(LOCAL_PARTICIPANT_KEY)
@@ -93,11 +117,26 @@ function App() {
   const isReady = Boolean(room && currentParticipantId && room.readyState[currentParticipantId] === 'ready')
   const isSoloRoom = people.length === 1
   const chatMessages = room ? room.eventLog.filter((event) => event.type === 'chat_message').slice(-20) : []
+  const recommendationMessages = room ? room.eventLog.filter((event) => event.type === 'recommendation_sent').slice(-10) : []
+  const selectedWatchEvent = room ? room.eventLog.findLast((event) => event.type === 'recommendation_selected') : undefined
+  const recommendationVoteEvents = room ? room.eventLog.filter((event) => event.type === 'recommendation_voted') : []
+  const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders)
+  const recommendationResults = recommendationSource === 'tmdb' ? liveRecommendationResults : mockRecommendationResults
   const pairedExtensions = room ? Object.values(room.extensions ?? {}) : []
   const localPlayback = room && currentParticipantId ? room.playbackByParticipant?.[currentParticipantId] : undefined
   const readyCount = room ? people.filter((person) => room.readyState[person.id] === 'ready').length : 0
   const setupOpen = Boolean(room && (room.targetTimestamp === '00:00' || showSetupSheet))
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
+  const tvRemoteConfigured = linkedTvDevice.host.trim().length > 0
+  const tvRemoteRoadmap = [
+    { label: 'Roku', status: 'Live now', note: 'Generic Play key via local helper/native path.' },
+    { label: 'LG webOS', status: 'Helper adapter', note: 'Experimental pairing + SSAP play/pause endpoints; hardware validation required.' },
+    { label: 'Samsung', status: 'Helper beta', note: 'Unofficial LAN KEY_PLAY endpoint after TV approval; model variance expected.' },
+    { label: 'Cast', status: 'Session only', note: 'Can control Cast sessions Watch Sync starts/joins, not native TV apps.' },
+    { label: 'Sony/Vizio/Philips', status: 'Helper beta', note: 'Mock-tested key endpoints; ship as supported only after hardware tests.' },
+    { label: 'Fire/Android TV', status: 'Advanced helper', note: 'ADB/dev-mode helper only; not consumer default.' },
+    { label: 'Apple TV', status: 'Manual only', note: 'No public App-Store-safe generic remote path verified.' },
+  ]
 
   useEffect(() => {
     const transport = createWebSocketRoomTransport({
@@ -151,12 +190,78 @@ function App() {
     })
   }, [room, transportStatus])
 
+  const callTvRemoteHelper = useCallback(async (path: string, init?: RequestInit) => {
+    const baseUrl = linkedTvDevice.helperUrl.trim().replace(/\/$/, '')
+    if (!baseUrl) throw new Error('Enter the TV remote helper URL first.')
+    const response = await fetch(`${baseUrl}${path}`, init)
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(payload?.error ?? `TV remote helper returned ${response.status}`)
+    }
+    return payload
+  }, [linkedTvDevice.helperUrl])
+
+  const runHelperRequest = useCallback(async (request: ReturnType<typeof buildDevicePlayRequest> | ReturnType<typeof buildDeviceTestRequest>) => {
+    if (request.unsafeReason) throw new Error(request.unsafeReason)
+    if (request.method === 'GET') return callTvRemoteHelper(request.path)
+    return callTvRemoteHelper(request.path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(request.body ?? {}),
+    })
+  }, [callTvRemoteHelper])
+
+  const saveLinkedDevice = useCallback((patch: Partial<LinkedTvDevice> = {}) => {
+    const next = normalizeLinkedTvDevice({ ...linkedTvDevice, ...patch })
+    setLinkedTvDevice(next)
+    saveLinkedTvDevice(next)
+    setTvRemoteStatus(`${next.label} saved locally. Room backend still only coordinates countdown; this helper controls your TV on your LAN.`)
+  }, [linkedTvDevice])
+
+  const testLinkedDevice = useCallback(async () => {
+    const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
+    saveLinkedTvDevice(savedDevice)
+    setTvRemoteStatus(`Testing ${savedDevice.label} via local helper...`)
+    try {
+      const payload = await runHelperRequest(buildDeviceTestRequest(savedDevice))
+      const updates: Partial<LinkedTvDevice> = { lastTestedAt: nowIso() }
+      if (savedDevice.platform === 'lg_webos' && typeof payload?.clientKey === 'string') updates.clientKey = payload.clientKey
+      if (savedDevice.platform === 'samsung' && typeof payload?.token === 'string') updates.token = payload.token
+      saveLinkedDevice(updates)
+      setTvRemoteStatus(`${savedDevice.label} helper check passed. Hardware behavior still needs real-TV validation.`)
+    } catch (error) {
+      setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} helper check failed.`)
+    }
+  }, [linkedTvDevice, runHelperRequest, saveLinkedDevice])
+
+  const sendLinkedTvPlay = useCallback(async (source: 'manual' | 'countdown' = 'manual') => {
+    const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
+    if (!savedDevice.host.trim()) {
+      setTvRemoteStatus('Link a supported TV/device before sending Play. Manual countdown still works.')
+      return
+    }
+    saveLinkedTvDevice(savedDevice)
+    setTvRemoteStatus(`Sending one ${savedDevice.label} Play command via local helper...`)
+    try {
+      await runHelperRequest(buildDevicePlayRequest(savedDevice))
+      setTvRemoteStatus(`${savedDevice.label} Play sent (${source}). This is a generic remote command only; use manual fallback if the TV app ignores it.`)
+    } catch (error) {
+      setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} Play failed. Use manual countdown.`)
+    }
+  }, [linkedTvDevice, runHelperRequest])
+
   const tick = useCallback((frequency = 660) => {
     if ('vibrate' in navigator) navigator.vibrate(frequency > 900 ? 180 : 80)
   }, [])
 
   useEffect(() => {
     if (!room || !bothReady(room) || room.countdownState.phase !== 'idle' || !currentParticipantId || currentParticipantId !== room.hostId) return
+    const readyKey = `${room.roomId}:${room.updatedAt}:${Object.entries(room.readyState)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([id, status]) => `${id}:${status}`)
+      .join('|')}`
+    if (autoCountdownDispatchKeyRef.current === readyKey) return
+    autoCountdownDispatchKeyRef.current = readyKey
     dispatch({
       type: 'countdown_started',
       actorId: currentParticipantId,
@@ -183,7 +288,11 @@ function App() {
       setCountdownText('PLAY')
       tick(1040)
       if (currentParticipantId === room.hostId) {
+        const playKey = `${room.roomId}:${room.countdownState.startedAt ?? room.countdownState.startsAtEpochMs ?? ''}`
+        if (playNowDispatchKeyRef.current === playKey) return
+        playNowDispatchKeyRef.current = playKey
         dispatch({ type: 'play_now', actorId: currentParticipantId, at: nowIso() })
+        if (tvRemoteConfigured) void sendLinkedTvPlay('countdown')
         if (isSoloRoom) {
           window.setTimeout(() => {
             dispatch({ type: 'countdown_cancelled', actorId: currentParticipantId, at: nowIso() })
@@ -193,7 +302,7 @@ function App() {
     }, 250)
 
     return () => window.clearInterval(interval)
-  }, [currentParticipantId, dispatch, isSoloRoom, room, tick])
+  }, [currentParticipantId, dispatch, isSoloRoom, room, sendLinkedTvPlay, tick, tvRemoteConfigured])
 
   function handleCreate(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -292,6 +401,99 @@ function App() {
       durationSeconds: 3,
       at: nowIso(),
     })
+  }
+
+
+  function updateLinkedDevice(patch: Partial<LinkedTvDevice>) {
+    setLinkedTvDevice((current) => normalizeLinkedTvDevice({ ...current, ...patch }))
+  }
+
+
+  function toggleRecommendationProvider(provider: string) {
+    setSelectedRecommendationProviders((current) => current.includes(provider)
+      ? current.filter((item) => item !== provider)
+      : [...current, provider])
+  }
+
+  async function searchLiveRecommendations() {
+    const query = recommendationQuery.trim()
+    if (!query) {
+      setRecommendationSource('mock')
+      setRecommendationStatus('Type a title or keyword before live TMDB search. Mock recommendations are still available.')
+      return
+    }
+    setRecommendationStatus('Searching TMDB via the server token proxy...')
+    try {
+      const response = await fetch(buildRecommendationSearchApiUrl(query, selectedRecommendationProviders, 'US'))
+      const payload = await response.json().catch(() => ({})) as { ok?: boolean; items?: WatchRecommendation[]; error?: string; fallback?: string }
+      if (!response.ok || payload.ok === false) {
+        setRecommendationSource('mock')
+        setLiveRecommendationResults([])
+        setRecommendationStatus(`${payload.error ?? `TMDB search returned ${response.status}`} Showing mock catalog instead.`)
+        return
+      }
+      setLiveRecommendationResults(payload.items ?? [])
+      setRecommendationSource('tmdb')
+      setRecommendationStatus((payload.items?.length ?? 0) > 0
+        ? 'Showing live TMDB results for the selected region/providers. Provider availability can vary by account and date.'
+        : 'TMDB returned no matching titles for those filters. Showing an empty live result set; clear live search to return to mock cards.')
+    } catch (error) {
+      setRecommendationSource('mock')
+      setLiveRecommendationResults([])
+      setRecommendationStatus(error instanceof Error ? `${error.message}. Showing mock catalog instead.` : 'TMDB search failed. Showing mock catalog instead.')
+    }
+  }
+
+  function clearLiveRecommendations() {
+    setRecommendationSource('mock')
+    setLiveRecommendationResults([])
+    setRecommendationStatus('Showing the safe mock catalog. Live TMDB search can be retried any time.')
+  }
+
+  function findRecommendationItem(sourceId: string): WatchRecommendation | undefined {
+    return recommendationResults.find((candidate) => candidate.sourceId === sourceId)
+      ?? recommendationMessages.find((event) => event.item.sourceId === sourceId)?.item
+      ?? (selectedWatchEvent?.item.sourceId === sourceId ? selectedWatchEvent.item : undefined)
+  }
+
+  function getRecommendationVoteSummary(sourceId: string) {
+    const latestVotesByActor = new Map<string, 'up' | 'down'>()
+    for (const event of recommendationVoteEvents) {
+      if (event.sourceId === sourceId) latestVotesByActor.set(event.actorId, event.vote)
+    }
+    const votes = Array.from(latestVotesByActor.values())
+    return {
+      up: votes.filter((vote) => vote === 'up').length,
+      down: votes.filter((vote) => vote === 'down').length,
+    }
+  }
+
+  function sendRecommendation(sourceId: string) {
+    if (!room || !currentParticipantId) return
+    const item = findRecommendationItem(sourceId)
+    if (!item) return
+    dispatch({ type: 'recommendation_sent', actorId: currentParticipantId, item, at: nowIso() })
+    setCopyStatus(`Recommended ${item.title} to the room.`)
+    setTimeout(() => setCopyStatus(''), 2200)
+  }
+
+  function voteRecommendation(sourceId: string, vote: 'up' | 'down') {
+    if (!room || !currentParticipantId) return
+    const item = findRecommendationItem(sourceId)
+    if (!item) return
+    dispatch({ type: 'recommendation_voted', actorId: currentParticipantId, sourceId, vote, at: nowIso() })
+    setCopyStatus(`${vote === 'up' ? 'Voted yes' : 'Voted no'} on ${item.title}.`)
+    setTimeout(() => setCopyStatus(''), 1800)
+  }
+
+  function selectRecommendation(sourceId: string) {
+    if (!room || !currentParticipantId) return
+    const item = findRecommendationItem(sourceId)
+    if (!item) return
+    dispatch({ type: 'recommendation_selected', actorId: currentParticipantId, item, at: nowIso() })
+    setSetupDraft({ service: item.providers[0] ?? '', title: item.title, targetTimestamp: '00:00' })
+    setCopyStatus(`${item.title} set as tonight's watch. Everyone should pause at 00:00 and ready up.`)
+    setTimeout(() => setCopyStatus(''), 2400)
   }
 
   function sendChatMessage(event: FormEvent<HTMLFormElement>) {
@@ -506,6 +708,12 @@ function App() {
           <button className="secondary-action" type="button" onClick={() => setShowSetupSheet(!showSetupSheet)} aria-expanded={setupOpen}>
             Time
           </button>
+          <button className="secondary-action" type="button" onClick={() => setShowRecommendDrawer(!showRecommendDrawer)} aria-expanded={showRecommendDrawer}>
+            Find watch
+          </button>
+          <button className="secondary-action" type="button" onClick={() => setShowTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
+            TV remote
+          </button>
         </div>
 
         {showChat && (
@@ -537,6 +745,208 @@ function App() {
             </form>
           </div>
         )}
+
+        {selectedWatchEvent && (
+          <section className="tonight-card" aria-label="Tonight's selected watch">
+            <span className="eyebrow">Tonight</span>
+            <strong>{selectedWatchEvent.item.title}{selectedWatchEvent.item.year ? ` (${selectedWatchEvent.item.year})` : ''}</strong>
+            <p>{selectedWatchEvent.item.providers.join(', ') || 'Open it manually on your TV'} · pause at 00:00, then both tap ready.</p>
+          </section>
+        )}
+
+        {recommendationMessages.length > 0 && (
+          <div className="recommendation-feed" aria-label="Room recommendations">
+            {recommendationMessages.map((event) => {
+              const votes = getRecommendationVoteSummary(event.item.sourceId)
+              return (
+                <article className="recommendation-card shared" key={`${event.at}-${event.actorId}-${event.item.sourceId}`}>
+                  <div>
+                    <strong>{event.item.title}{event.item.year ? ` (${event.item.year})` : ''}</strong>
+                    <span>Recommended by {room.participants[event.actorId]?.displayName ?? 'Partner'} · {event.item.providers.join(', ')}</span>
+                  </div>
+                  <p>{event.item.overview}</p>
+                  <div className="recommendation-meta">
+                    <span>{event.item.ratingLabel}: {event.item.ratingValue}</span>
+                    {event.item.externalUrl && <a href={event.item.externalUrl} target="_blank" rel="noreferrer">Details</a>}
+                  </div>
+                  <div className="vote-row" aria-label={`Votes for ${event.item.title}`}>
+                    <button type="button" onClick={() => voteRecommendation(event.item.sourceId, 'up')}>👍 {votes.up}</button>
+                    <button type="button" onClick={() => voteRecommendation(event.item.sourceId, 'down')}>👎 {votes.down}</button>
+                    <button type="button" onClick={() => selectRecommendation(event.item.sourceId)}>Set tonight</button>
+                  </div>
+                </article>
+              )
+            })}
+          </div>
+        )}
+
+        <div className="recommend-drawer">
+          <button
+            className={`drawer-toggle ${showRecommendDrawer ? 'open' : ''}`}
+            type="button"
+            onClick={() => setShowRecommendDrawer(!showRecommendDrawer)}
+            aria-expanded={showRecommendDrawer}
+          >
+            <span>Find next watch</span>
+            <small>{recommendationSource === 'tmdb' ? 'Live TMDB search' : 'Mock catalog + TMDB-ready'}</small>
+          </button>
+
+          {showRecommendDrawer && (
+            <div className="drawer-content recommend-panel">
+              <p>Search the starter catalog or try live TMDB search when the server token is configured. Filter by streaming platform, then send a recommendation card into the room chat. Rotten Tomatoes scores are licensed-only later.</p>
+              <label className="field-label compact">
+                <span>Search</span>
+                <input value={recommendationQuery} onChange={(event) => setRecommendationQuery(event.target.value)} placeholder="Try sci-fi, comedy, action..." aria-label="Search watch recommendations" />
+              </label>
+              <div className="remote-button-row triple recommendation-actions">
+                <button type="button" onClick={searchLiveRecommendations}>Search TMDB</button>
+                <button type="button" onClick={clearLiveRecommendations}>Use mock</button>
+                <span className={`source-pill ${recommendationSource}`}>{recommendationSource === 'tmdb' ? 'Live' : 'Mock'}</span>
+              </div>
+              <p className="mode-caveat">{recommendationStatus}</p>
+              <div className="provider-filter-row" aria-label="Streaming service filters">
+                {RECOMMENDATION_PROVIDERS.map((provider) => (
+                  <button
+                    key={provider}
+                    className={selectedRecommendationProviders.includes(provider) ? 'selected' : ''}
+                    type="button"
+                    onClick={() => toggleRecommendationProvider(provider)}
+                  >
+                    {provider}
+                  </button>
+                ))}
+              </div>
+              <div className="recommendation-results">
+                {recommendationResults.length === 0 ? (
+                  <p className="chat-empty">No demo matches. Clear filters or try another search.</p>
+                ) : recommendationResults.map((item) => (
+                  <article className="recommendation-card" key={item.sourceId}>
+                    <div>
+                      <strong>{item.title}{item.year ? ` (${item.year})` : ''}</strong>
+                      <span>{item.mediaType === 'tv' ? 'Series' : 'Movie'} · {item.providers.join(', ')}</span>
+                    </div>
+                    <p>{item.overview}</p>
+                    <div className="recommendation-meta">
+                      <span>{item.ratingLabel}: {item.ratingValue}</span>
+                      <button type="button" onClick={() => sendRecommendation(item.sourceId)}>Recommend</button>
+                    </div>
+                    <div className="vote-row" aria-label={`Actions for ${item.title}`}>
+                      <button type="button" onClick={() => voteRecommendation(item.sourceId, 'up')}>👍 {getRecommendationVoteSummary(item.sourceId).up}</button>
+                      <button type="button" onClick={() => voteRecommendation(item.sourceId, 'down')}>👎 {getRecommendationVoteSummary(item.sourceId).down}</button>
+                      <button type="button" onClick={() => selectRecommendation(item.sourceId)}>Set tonight</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <p className="mode-caveat">This product uses the TMDB API but is not endorsed or certified by TMDB. Do not scrape Rotten Tomatoes or JustWatch.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="tv-remote-drawer">
+          <button
+            className={`drawer-toggle ${showTvRemoteDrawer ? 'open' : ''}`}
+            type="button"
+            onClick={() => setShowTvRemoteDrawer(!showTvRemoteDrawer)}
+            aria-expanded={showTvRemoteDrawer}
+          >
+            <span>TV Remote Mode</span>
+            <small>Roku-first, generic Play key</small>
+          </button>
+
+          {showTvRemoteDrawer && (
+            <div className="drawer-content tv-remote-panel">
+              <p>
+                TV Remote Mode links one local device/helper for this browser. You still open the show yourself and pause at the timestamp; at GO, Watch Sync sends one generic Play command where that is safe.
+              </p>
+              <label className="field-label compact">
+                <span>Platform</span>
+                <select
+                  value={linkedTvDevice.platform}
+                  onChange={(event) => updateLinkedDevice({ platform: event.target.value as LinkedTvDevice['platform'], label: TV_PLATFORM_OPTIONS.find((option) => option.id === event.target.value)?.label ?? 'Linked TV' })}
+                  aria-label="TV remote platform"
+                >
+                  {TV_PLATFORM_OPTIONS.map((option) => (
+                    <option key={option.id} value={option.id}>{option.label} — {option.status}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="field-label compact">
+                <span>TV IP / hostname</span>
+                <input
+                  value={linkedTvDevice.host}
+                  onChange={(event) => updateLinkedDevice({ host: event.target.value })}
+                  placeholder="192.168.1.42"
+                  inputMode="url"
+                  aria-label="TV IP address or hostname"
+                />
+              </label>
+              <label className="field-label compact">
+                <span>Helper URL</span>
+                <input
+                  value={linkedTvDevice.helperUrl}
+                  onChange={(event) => updateLinkedDevice({ helperUrl: event.target.value })}
+                  placeholder="http://127.0.0.1:8790"
+                  inputMode="url"
+                  aria-label="TV remote helper URL"
+                />
+              </label>
+              {linkedTvDevice.platform !== 'roku' && (
+                <label className="field-label compact">
+                  <span>Protocol URL override</span>
+                  <input
+                    value={linkedTvDevice.url ?? ''}
+                    onChange={(event) => updateLinkedDevice({ url: event.target.value })}
+                    placeholder="Optional: ws://tv:3000 or http://tv:1925"
+                    inputMode="url"
+                    aria-label="Protocol URL override"
+                  />
+                </label>
+              )}
+              {platformNeedsPairing(linkedTvDevice.platform) && (
+                <label className="field-label compact">
+                  <span>{linkedTvDevice.platform === 'lg_webos' ? 'LG client key' : linkedTvDevice.platform === 'samsung' ? 'Samsung token' : 'Vizio auth token'}</span>
+                  <input
+                    value={linkedTvDevice.platform === 'lg_webos' ? linkedTvDevice.clientKey ?? '' : linkedTvDevice.platform === 'samsung' ? linkedTvDevice.token ?? '' : linkedTvDevice.authToken ?? ''}
+                    onChange={(event) => updateLinkedDevice(linkedTvDevice.platform === 'lg_webos' ? { clientKey: event.target.value } : linkedTvDevice.platform === 'samsung' ? { token: event.target.value } : { authToken: event.target.value })}
+                    placeholder="Stored locally only"
+                    aria-label="Local pairing token"
+                  />
+                </label>
+              )}
+              {platformNeedsSonyIrcc(linkedTvDevice.platform) && (
+                <>
+                  <label className="field-label compact">
+                    <span>Sony PSK (if enabled)</span>
+                    <input value={linkedTvDevice.psk ?? ''} onChange={(event) => updateLinkedDevice({ psk: event.target.value })} placeholder="Optional local PSK" aria-label="Sony PSK" />
+                  </label>
+                  <label className="field-label compact">
+                    <span>Sony Play IRCC code</span>
+                    <input value={linkedTvDevice.irccCode ?? ''} onChange={(event) => updateLinkedDevice({ irccCode: event.target.value })} placeholder="From remote-controller-info" aria-label="Sony Play IRCC code" />
+                  </label>
+                </>
+              )}
+              {linkedTvDevice.platform === 'philips_jointspace' && (
+                <label className="field-label compact">
+                  <span>JointSpace API version</span>
+                  <input value={linkedTvDevice.apiVersion ?? 6} onChange={(event) => updateLinkedDevice({ apiVersion: Number(event.target.value) || 6 })} inputMode="numeric" aria-label="Philips JointSpace API version" />
+                </label>
+              )}
+              <div className="remote-button-row triple">
+                <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>
+                <button type="button" onClick={testLinkedDevice}>{platformNeedsPairing(linkedTvDevice.platform) ? 'Pair/Test' : 'Test'}</button>
+                <button type="button" onClick={() => sendLinkedTvPlay('manual')}>Send Play</button>
+              </div>
+              <div className="extension-status">{tvRemoteStatus}</div>
+              <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">
+                {tvRemoteRoadmap.map((target) => (
+                  <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
+                ))}
+              </div>
+              <p className="mode-caveat">Pairing tokens stay in this browser/helper config, not the room backend. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
+            </div>
+          )}
+        </div>
 
         <div className="laptop-drawer">
           <button

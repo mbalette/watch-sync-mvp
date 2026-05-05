@@ -487,7 +487,7 @@
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 9px;
 }
 
@@ -738,4 +738,224 @@ button:active {
     border: 1px solid rgba(255, 248, 231, 0.05);
     box-shadow: 0 36px 120px rgba(0,0,0,0.42);
   }
+}
+
+
+.tv-remote-panel {
+  gap: 12px;
+}
+
+.field-label.compact {
+  gap: 6px;
+  font-size: 0.74rem;
+}
+
+.field-label.compact input,
+.field-label.compact select {
+  min-height: 46px;
+  font-size: 0.92rem;
+}
+
+.field-label.compact select {
+  width: 100%;
+  border: 1px solid rgba(255, 248, 231, 0.10);
+  border-radius: 18px;
+  padding: 12px 13px;
+  color: var(--text);
+  background: rgba(255, 248, 231, 0.055);
+  font: inherit;
+}
+
+.remote-button-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.remote-button-row.triple {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.remote-button-row button {
+  min-height: 46px;
+  padding: 0 10px;
+  border-radius: 16px;
+  font-size: 0.84rem;
+}
+
+.compatibility-mini {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border-radius: 16px;
+  color: var(--text-soft);
+  background: rgba(0,0,0,0.13);
+  font-size: 0.78rem;
+  line-height: 1.38;
+}
+
+.compatibility-mini span {
+  display: block;
+}
+
+.compatibility-mini strong {
+  color: var(--gold);
+}
+
+.mode-caveat {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+
+.recommend-panel {
+  gap: 12px;
+}
+
+.provider-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.provider-filter-row button {
+  min-height: 36px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  font-size: 0.78rem;
+}
+
+.provider-filter-row button.selected {
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+  border: 0;
+}
+
+.recommendation-results,
+.recommendation-feed {
+  display: grid;
+  gap: 10px;
+}
+
+.recommendation-card {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  border-radius: 20px;
+  background: rgba(255, 248, 231, 0.06);
+  border: 1px solid rgba(255, 248, 231, 0.09);
+}
+
+.recommendation-card.shared {
+  background: rgba(230, 179, 124, 0.08);
+  border-color: rgba(230, 179, 124, 0.16);
+}
+
+.recommendation-card strong,
+.recommendation-card span {
+  display: block;
+}
+
+.recommendation-card strong {
+  color: var(--text);
+  font-size: 0.96rem;
+}
+
+.recommendation-card span,
+.recommendation-card p {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.recommendation-card p {
+  margin: 0;
+}
+
+.recommendation-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.recommendation-meta button,
+.recommendation-meta a {
+  min-height: 36px;
+  padding: 8px 11px;
+  border-radius: 999px;
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+  border: 0;
+  font-size: 0.78rem;
+  font-weight: 760;
+  text-decoration: none;
+}
+
+
+.recommendation-actions {
+  align-items: center;
+}
+
+.source-pill {
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 10px 12px;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.source-pill.tmdb {
+  border-color: rgba(1, 210, 119, 0.5);
+  color: #7cf5bd;
+}
+
+
+.tonight-card {
+  display: grid;
+  gap: 6px;
+  padding: 13px 14px;
+  border-radius: 22px;
+  background: linear-gradient(145deg, rgba(230, 179, 124, 0.16), rgba(232, 132, 124, 0.10));
+  border: 1px solid rgba(230, 179, 124, 0.24);
+}
+
+.tonight-card strong {
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.tonight-card p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.83rem;
+  line-height: 1.38;
+}
+
+.vote-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 7px;
+}
+
+.vote-row button {
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  color: var(--text-soft);
+  background: rgba(255, 248, 231, 0.065);
+  font-size: 0.76rem;
+}
+
+.vote-row button:last-child {
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+  border: 0;
 }

@@ -2,7 +2,7 @@ export type ActiveMode = 'tv_manual' | 'laptop_auto'
 export type ParticipantRole = 'host' | 'guest'
 export type ReadyStatus = 'idle' | 'ready'
 export type CountdownPhase = 'idle' | 'counting' | 'play' | 'cancelled'
-export type RemoteSignal = 'pause' | 'buffering' | 'resync' | 'next_episode' | 'play_now' | 'message'
+export type RemoteSignal = 'pause' | 'buffering' | 'resync' | 'next_episode' | 'play_now' | 'message' | 'recommendation'
 
 export interface Participant {
   id: string
@@ -40,6 +40,20 @@ export interface ExtensionPairing {
   tabTitle?: string
   urlOrigin?: string
   capabilities: ExtensionCapabilities
+}
+
+export interface WatchRecommendation {
+  source: 'mock' | 'tmdb' | 'omdb'
+  sourceId: string
+  mediaType: 'movie' | 'tv'
+  title: string
+  year?: string
+  overview: string
+  providers: string[]
+  posterUrl?: string
+  ratingLabel?: string
+  ratingValue?: string
+  externalUrl?: string
 }
 
 export interface PlaybackStatus {
@@ -98,6 +112,9 @@ export type RoomEvent =
   | { type: 'resync_requested'; actorId: string; timestamp: string; at: string }
   | { type: 'timestamp_submitted'; actorId: string; timestamp: string; at: string }
   | { type: 'chat_message'; actorId: string; message: string; at: string }
+  | { type: 'recommendation_sent'; actorId: string; item: WatchRecommendation; note?: string; at: string }
+  | { type: 'recommendation_voted'; actorId: string; sourceId: string; vote: 'up' | 'down'; at: string }
+  | { type: 'recommendation_selected'; actorId: string; item: WatchRecommendation; at: string }
   | { type: 'next_episode_requested'; actorId: string; at: string }
   | { type: 'extension_paired'; extensionId: string; participantId: string; capabilities: ExtensionCapabilities; tabTitle?: string; urlOrigin?: string; at: string }
   | { type: 'playback_status'; actorId: string; extensionId: string; paused: boolean; currentTime: number; duration?: number; playbackRate?: number; readyState?: number; seeking?: boolean; ended?: boolean; tabTitle?: string; urlOrigin?: string; at: string }
@@ -154,6 +171,15 @@ export function isRoomEvent(value: unknown): value is RoomEvent {
       return hasActor(value) && typeof value.timestamp === 'string'
     case 'chat_message':
       return hasActor(value) && typeof value.message === 'string' && value.message.trim().length > 0
+    case 'recommendation_sent':
+      return hasActor(value) && isWatchRecommendation(value.item) && optionalString(value.note)
+    case 'recommendation_voted':
+      return hasActor(value)
+        && typeof value.sourceId === 'string'
+        && value.sourceId.length > 0
+        && (value.vote === 'up' || value.vote === 'down')
+    case 'recommendation_selected':
+      return hasActor(value) && isWatchRecommendation(value.item)
     case 'extension_paired':
       return typeof value.extensionId === 'string'
         && value.extensionId.length > 0
@@ -204,6 +230,25 @@ export function isExtensionCapabilities(value: unknown): value is ExtensionCapab
     && typeof value.play === 'boolean'
     && typeof value.pause === 'boolean'
     && typeof value.seek === 'boolean'
+}
+
+function isWatchRecommendation(value: unknown): value is WatchRecommendation {
+  return isRecord(value)
+    && (value.source === 'mock' || value.source === 'tmdb' || value.source === 'omdb')
+    && typeof value.sourceId === 'string'
+    && value.sourceId.length > 0
+    && (value.mediaType === 'movie' || value.mediaType === 'tv')
+    && typeof value.title === 'string'
+    && value.title.trim().length > 0
+    && optionalString(value.year)
+    && typeof value.overview === 'string'
+    && value.overview.trim().length > 0
+    && Array.isArray(value.providers)
+    && value.providers.every((provider) => typeof provider === 'string' && provider.trim().length > 0)
+    && optionalString(value.posterUrl)
+    && optionalString(value.ratingLabel)
+    && optionalString(value.ratingValue)
+    && optionalString(value.externalUrl)
 }
 
 function isWatchSetup(value: unknown): value is WatchSetup {
@@ -344,6 +389,20 @@ export function applyRoomEvent(room: RoomState, event: RoomEvent): RoomState {
       return { ...next, targetTimestamp: event.timestamp || normalizedRoom.targetTimestamp, resyncTimestamp: event.timestamp }
     case 'chat_message':
       return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'message', event.message.trim(), event.at) }
+    case 'recommendation_sent':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'recommendation', `Recommended: ${event.item.title}`, event.at) }
+    case 'recommendation_voted':
+      return { ...next, lastSignal: makeSignal(normalizedRoom, event.actorId, 'recommendation', `${event.vote === 'up' ? 'voted yes' : 'voted no'} on a recommendation.`, event.at) }
+    case 'recommendation_selected':
+      return {
+        ...next,
+        service: event.item.providers[0] ?? '',
+        title: event.item.title,
+        targetTimestamp: '00:00',
+        readyState: resetReady(normalizedRoom),
+        countdownState: { phase: 'idle', durationSeconds: 3 },
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'recommendation', `Tonight's watch: ${event.item.title} — pause at 00:00, then ready up.`, event.at),
+      }
     case 'next_episode_requested':
       return {
         ...next,

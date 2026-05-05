@@ -1,0 +1,17 @@
+name = "watch-sync-realtime"
+main = "worker/realtime.ts"
+compatibility_date = "2025-12-01"
+
+workers_dev = true
+# Intended production custom domain route:
+# route = { pattern = "api.kyrosdirect.tech", custom_domain = true }
+# Attaching this route/custom domain requires Cloudflare Zone Workers Routes/Custom Domains write permission.
+
+[durable_objects]
+bindings = [
+  { name = "ROOMS", class_name = "WatchSyncRoomDurableObject" }
+]
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["WatchSyncRoomDurableObject"]

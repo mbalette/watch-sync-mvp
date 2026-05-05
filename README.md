@@ -100,3 +100,14 @@ node --check extension/content_script.js
 - `docs/qa-checklist.md` — deterministic QA commands, local extension checks, and security caveats.
 - `extension/README.md` — local unpacked Chrome extension setup and limitations.
 - `docs/ios-native-bridge.md` — future native iOS bridge notes.
+
+
+## Experimental TV Remote Mode
+
+Roku-first helper mode is documented in `docs/tv-remote-mode.md`.
+
+```bash
+npm run dev:tv-remote
+```
+
+This sends a generic Roku ECP `Play` key through a local helper. It does **not** choose streaming content, seek inside Netflix/Hulu/Disney TV apps, or claim verified discrete Roku Pause support; reliable iPhone use likely requires a native app or same-LAN companion because hosted PWAs face local-network browser restrictions.
