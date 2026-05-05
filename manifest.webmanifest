@@ -1,0 +1,20 @@
+{
+  "name": "Watch Sync Coach",
+  "short_name": "Watch Sync",
+  "description": "Manual TV sync coach for remote movie nights.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070812",
+  "theme_color": "#070812",
+  "categories": ["entertainment", "productivity", "social"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
