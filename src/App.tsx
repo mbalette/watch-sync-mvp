@@ -122,7 +122,7 @@ function App() {
   const recommendationMessages = room ? room.eventLog.filter((event) => event.type === 'recommendation_sent').slice(-10) : []
   const selectedWatchEvent = room ? room.eventLog.findLast((event) => event.type === 'recommendation_selected') : undefined
   const recommendationVoteEvents = room ? room.eventLog.filter((event) => event.type === 'recommendation_voted') : []
-  const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders).filter((item) => recommendationMediaType === 'all' || item.mediaType === recommendationMediaType)
+  const mockRecommendationResults = filterRecommendations(recommendationQuery, selectedRecommendationProviders, { mediaType: recommendationMediaType, category: recommendationCategory })
   const recommendationResults = recommendationSource === 'tmdb' ? liveRecommendationResults : mockRecommendationResults
   const pairedExtensions = room ? Object.values(room.extensions ?? {}) : []
   const localPlayback = room && currentParticipantId ? room.playbackByParticipant?.[currentParticipantId] : undefined

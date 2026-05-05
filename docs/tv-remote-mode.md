@@ -247,7 +247,7 @@ Android TV / Google TV / Fire TV:
 
 ### TMDB live recommendation browse/search
 
-- `src/recommendations.ts` contains a local/mock starter catalog and provider filters for Netflix, Prime Video, Disney+, Paramount+, Max, and Hulu.
+- `src/recommendations.ts` contains a local/mock starter catalog and provider filters for Netflix, Prime Video, Disney+, Paramount+, Max, Hulu, Peacock, and Apple TV+.
 - `src/tmdb-recommendations.ts` contains the TMDB mapping/proxy helper for both title search and provider-filtered Discover.
 - `functions/api/recommendations/tmdb.ts` exposes `GET /api/recommendations/tmdb?q=<query>&region=US&providers=Max,Hulu` for title search when a server-side `TMDB_READ_ACCESS_TOKEN`/`TMDB_API_TOKEN` is configured.
 - `functions/api/recommendations/discover.ts` exposes `GET /api/recommendations/discover?region=US&providers=Hulu,Max&mediaType=all&category=popular` for the JustWatch-like free browse path. It uses TMDB Discover with `watch_region`, `with_watch_providers`, `with_watch_monetization_types=flatrate`, and movie/show category filters.

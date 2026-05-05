@@ -7,6 +7,8 @@ export const TMDB_PROVIDER_IDS: Record<string, number> = {
   'Paramount+': 531,
   Max: 1899,
   Hulu: 15,
+  Peacock: 386,
+  'Apple TV+': 350,
 }
 
 type TmdbEnv = {
