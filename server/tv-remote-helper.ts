@@ -41,7 +41,8 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
   const runAdb = deps.runAdb ?? runAdbCommand
 
   return http.createServer(async (req, res) => {
-  setCors(res)
+  if (!isAllowedOrigin(req, res)) return
+  setCors(req, res)
   if (req.method === 'OPTIONS') {
     res.writeHead(204)
     res.end()
@@ -287,10 +288,41 @@ function parseSafeHttpWebhookUrl(value: string): string {
   return parsed.toString()
 }
 
-function setCors(res: http.ServerResponse) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
+function isAllowedOrigin(req: http.IncomingMessage, res: http.ServerResponse): boolean {
+  const origin = req.headers.origin
+  if (!origin) return true
+  if (typeof origin !== 'string' || !allowedBrowserOrigin(origin)) {
+    sendJson(res, 403, { ok: false, error: 'TV remote helper rejected this browser origin.' })
+    return false
+  }
+  return true
+}
+
+function setCors(req: http.IncomingMessage, res: http.ServerResponse) {
+  const origin = typeof req.headers.origin === 'string' && allowedBrowserOrigin(req.headers.origin)
+    ? req.headers.origin
+    : 'https://app.kyrosdirect.tech'
+  res.setHeader('Access-Control-Allow-Origin', origin)
+  res.setHeader('Vary', 'Origin')
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+}
+
+function allowedBrowserOrigin(origin: string): boolean {
+  const configured = (process.env.TV_REMOTE_HELPER_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+  if (configured.includes(origin)) return true
+  try {
+    const parsed = new URL(origin)
+    if ((parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') && (parsed.protocol === 'http:' || parsed.protocol === 'https:')) return true
+    if (parsed.protocol === 'https:' && parsed.hostname === 'app.kyrosdirect.tech') return true
+    if (parsed.protocol === 'https:' && parsed.hostname.endsWith('.watch-sync-mvp.pages.dev')) return true
+  } catch {
+    return false
+  }
+  return false
 }
 
 function sendJson(res: http.ServerResponse, status: number, payload: unknown) {

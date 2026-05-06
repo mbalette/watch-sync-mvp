@@ -156,26 +156,24 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     canTestConnection: true,
     canSendPlay: true,
     canSendPause: true,
-    canAutoPlayAtGo: true,
+    canAutoPlayAtGo: false,
     requiresLocalHelper: true,
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
     publicClaimLevel: 'later-beta',
-    safeGoCommand: 'play',
     manualFallbackRequired: true,
   },
   home_assistant_webhook: {
     canTestConnection: true,
     canSendPlay: true,
     canSendPause: false,
-    canAutoPlayAtGo: true,
+    canAutoPlayAtGo: false,
     requiresLocalHelper: true,
     requiresPairing: false,
     requiresAdvancedSetup: true,
     hardwareValidated: false,
     publicClaimLevel: 'not-supported-yet',
-    safeGoCommand: 'Home Assistant media_play automation',
     manualFallbackRequired: true,
   },
   apple_tv_manual: {
@@ -422,9 +420,28 @@ export function getRemoteStartReadiness(deviceInput: LinkedTvDevice, lastHelperO
 export function canUseRemoteStartAtGo(deviceInput: LinkedTvDevice): boolean {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
+  if (capability.publicClaimLevel !== 'primary-beta' && capability.publicClaimLevel !== 'guided-setup-beta') return false
   if (!device.useRemoteStartAtGo || !capability.canAutoPlayAtGo || !capability.safeGoCommand) return false
   if (buildDevicePlayRequest(device).unsafeReason) return false
   return true
+}
+
+export function isAllowedLocalHelperUrl(value: string): boolean {
+  let parsed: URL
+  try {
+    parsed = new URL(value)
+  } catch {
+    return false
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return false
+  if (parsed.username || parsed.password) return false
+  const host = parsed.hostname.toLowerCase()
+  if (host === 'localhost' || host === '127.0.0.1' || host === '::1' || host.endsWith('.local')) return true
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true
+  const private172 = host.match(/^172\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/)
+  if (private172 && Number(private172[1]) >= 16 && Number(private172[1]) <= 31) return true
+  return false
 }
 
 export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {

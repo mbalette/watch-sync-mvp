@@ -26,6 +26,7 @@ import {
   getRemoteStartCapability,
   getRemoteStartReadiness,
   getRemoteStartWizard,
+  isAllowedLocalHelperUrl,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -267,6 +268,7 @@ function App() {
   const callTvRemoteHelper = useCallback(async (path: string, init?: RequestInit) => {
     const baseUrl = linkedTvDevice.helperUrl.trim().replace(/\/$/, '')
     if (!baseUrl) throw new Error('Enter the TV remote helper URL first.')
+    if (!isAllowedLocalHelperUrl(baseUrl)) throw new Error('Helper URL must be localhost, a private LAN address, or a .local host before Watch Sync sends local pairing details.')
     const response = await fetch(`${baseUrl}${path}`, init)
     const payload = await response.json().catch(() => ({}))
     if (!response.ok || payload?.ok === false) {
@@ -1261,6 +1263,8 @@ function App() {
                     value={linkedTvDevice.webhookUrl ?? ''}
                     onChange={(event) => updateLinkedDevice({ webhookUrl: event.target.value })}
                     placeholder="http://homeassistant.local:8123/api/webhook/REPLACE_WITH_RANDOM_ID"
+                    type="password"
+                    autoComplete="off"
                     inputMode="url"
                     aria-label="Home Assistant webhook URL"
                   />
@@ -1308,6 +1312,8 @@ function App() {
                     value={linkedTvDevice.platform === 'lg_webos' ? linkedTvDevice.clientKey ?? '' : linkedTvDevice.platform === 'samsung' ? linkedTvDevice.token ?? '' : linkedTvDevice.authToken ?? ''}
                     onChange={(event) => updateLinkedDevice(linkedTvDevice.platform === 'lg_webos' ? { clientKey: event.target.value } : linkedTvDevice.platform === 'samsung' ? { token: event.target.value } : { authToken: event.target.value })}
                     placeholder="Stored locally only"
+                    type="password"
+                    autoComplete="off"
                     aria-label="Local pairing token"
                   />
                 </label>
@@ -1316,7 +1322,7 @@ function App() {
                 <>
                   <label className="field-label compact">
                     <span>Sony PSK (if enabled)</span>
-                    <input value={linkedTvDevice.psk ?? ''} onChange={(event) => updateLinkedDevice({ psk: event.target.value })} placeholder="Optional local PSK" aria-label="Sony PSK" />
+                    <input value={linkedTvDevice.psk ?? ''} onChange={(event) => updateLinkedDevice({ psk: event.target.value })} placeholder="Optional local PSK" type="password" autoComplete="off" aria-label="Sony PSK" />
                   </label>
                   <label className="field-label compact">
                     <span>Sony Play IRCC code</span>
@@ -1341,7 +1347,7 @@ function App() {
                 <span>Use Remote Start at GO</span>
               </label>
               <p className="mode-caveat">
-                Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
+                Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable for unsupported/later/manual lanes — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
               </p>
               <div className="remote-button-row triple">
                 <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>
@@ -1355,7 +1361,7 @@ function App() {
                   <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
                 ))}
               </div>
-              <p className="mode-caveat">Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
+              <p className="mode-caveat">Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Helper calls are limited to localhost/private LAN/.local helper URLs before local pairing details are sent. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
             </div>
           )}
         </div>

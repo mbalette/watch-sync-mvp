@@ -8,6 +8,7 @@ import {
   getRemoteStartCapability,
   getRemoteStartReadiness,
   getRemoteStartWizard,
+  isAllowedLocalHelperUrl,
   normalizeLinkedTvDevice,
 } from './tv-remote-device'
 
@@ -107,7 +108,20 @@ describe('linked TV device helper routing', () => {
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2' }))).toBe(false)
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', useRemoteStartAtGo: true }))).toBe(true)
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'philips_jointspace', host: '192.168.1.6', useRemoteStartAtGo: true }))).toBe(false)
-    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'home_assistant_webhook', webhookUrl: 'http://ha.local/api/webhook/id', useRemoteStartAtGo: true }))).toBe(true)
+    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'home_assistant_webhook', webhookUrl: 'http://ha.local/api/webhook/id', useRemoteStartAtGo: true }))).toBe(false)
+    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'vizio_smartcast', host: '192.168.1.8', authToken: 'tok', useRemoteStartAtGo: true }))).toBe(false)
+  })
+
+
+  it('only allows local/private helper URLs before sending local credentials', () => {
+    expect(isAllowedLocalHelperUrl('http://127.0.0.1:8790')).toBe(true)
+    expect(isAllowedLocalHelperUrl('http://localhost:8790')).toBe(true)
+    expect(isAllowedLocalHelperUrl('http://192.168.1.42:8790')).toBe(true)
+    expect(isAllowedLocalHelperUrl('http://10.0.0.5:8790')).toBe(true)
+    expect(isAllowedLocalHelperUrl('http://tv-helper.local:8790')).toBe(true)
+    expect(isAllowedLocalHelperUrl('https://evil.example/collect')).toBe(false)
+    expect(isAllowedLocalHelperUrl('http://8.8.8.8:8790')).toBe(false)
+    expect(isAllowedLocalHelperUrl('file:///tmp/helper')).toBe(false)
   })
 
   it('builds platform-specific test requests', () => {

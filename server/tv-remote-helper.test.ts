@@ -63,6 +63,21 @@ describe('TV remote helper endpoints', () => {
     expect(calls).toEqual(['lg-pair', 'lg-play', 'samsung-pair', 'samsung-KEY_PLAY', 'sony-info', 'sony-ircc', 'philips-PlayPause', 'vizio-play'])
   })
 
+
+  it('rejects browser requests from unapproved origins before routing commands', async () => {
+    const calls: string[] = []
+    const baseUrl = await startHelper({
+      sendRokuKeypress: async () => { calls.push('roku') },
+    })
+
+    const allowed = await postJson(`${baseUrl}/roku/keypress`, { host: '192.168.1.2', key: 'Play' }, { Origin: 'https://app.kyrosdirect.tech' })
+    const blocked = await postJson(`${baseUrl}/roku/keypress`, { host: '192.168.1.2', key: 'Play' }, { Origin: 'https://evil.example' })
+
+    expect(allowed).toMatchObject({ ok: true })
+    expect(blocked).toMatchObject({ ok: false, error: expect.stringMatching(/origin/i) })
+    expect(calls).toEqual(['roku'])
+  })
+
   it('routes ADB connect and discrete media keys through injectable runner without shell strings', async () => {
     const calls: string[][] = []
     const baseUrl = await startHelper({
@@ -199,10 +214,10 @@ async function fetchJson(url: string): Promise<Record<string, unknown>> {
   return response.json() as Promise<Record<string, unknown>>
 }
 
-async function postJson(url: string, body: Record<string, unknown>): Promise<Record<string, unknown>> {
+async function postJson(url: string, body: Record<string, unknown>, headers: Record<string, string> = {}): Promise<Record<string, unknown>> {
   const response = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...headers },
     body: JSON.stringify(body),
   })
   return response.json() as Promise<Record<string, unknown>>
