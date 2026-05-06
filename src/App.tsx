@@ -24,6 +24,7 @@ import {
   buildDeviceTestRequest,
   canUseRemoteStartAtGo,
   getRemoteStartCapability,
+  getRemoteStartReadiness,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -196,15 +197,16 @@ function App() {
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
+  const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
   const selectedTvPlatformOption = TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform)
   const tvRemoteRoadmap = [
-    { label: 'Roku/local streaming device', status: 'Supported', note: 'Sends a discrete Play key via local helper; no pause claim.' },
-    { label: 'LG webOS', status: 'Beta', note: 'Local helper pairing + SSAP Play/Pause; hardware validation still pending.' },
-    { label: 'Samsung/Tizen', status: 'Beta', note: 'Unofficial LAN KEY_PLAY/KEY_PAUSE after TV approval; model variance expected.' },
-    { label: 'Fire TV / Android TV / Google TV', status: 'Advanced setup', note: 'ADB helper with KEYCODE_MEDIA_PLAY/PAUSE; developer mode and pairing required.' },
-    { label: 'Sony / Philips / Vizio', status: 'Beta', note: 'Brand-specific helper paths; Philips auto GO is disabled because PlayPause is a risky toggle.' },
-    { label: 'Home Assistant', status: 'Advanced setup', note: 'Local bridge to your own media_player/media_play automation; no HA secrets on Watch Sync servers.' },
-    { label: 'Apple TV', status: 'Manual-only', note: 'No direct-control claim; use manual countdown.' },
+    { label: 'Roku / Roku TV', status: 'Remote Start beta / primary', note: 'Local ECP Play at GO; some Roku OS builds require Control by mobile apps/network access.' },
+    { label: 'LG webOS', status: 'Remote Start beta / primary', note: 'Pair on TV prompt, save client key locally, then Test Play/Pause. Hardware validation pending.' },
+    { label: 'Samsung Tizen', status: 'Remote Start beta', note: 'TV approval/token if required, Test Play/Pause. Model/firmware variance expected.' },
+    { label: 'Sony Bravia', status: 'Remote Start beta for supported Sony TVs', note: 'Enable IP Control/PSK or PIN if needed, discover Play IRCC code, then Test Play.' },
+    { label: 'Fire TV / Android TV / Google TV', status: 'Guided setup beta', note: 'Developer Options/debugging, IP or pairing code, approve prompt, Test Play, Save. Some devices may need reconnect.' },
+    { label: 'Apple TV', status: 'Manual-only', note: 'No public direct-control headline claim; reverse-engineered pairing stays internal/beta only if accepted.' },
+    { label: 'Xbox / Cable / ISP boxes / Cast-AirPlay', status: 'Manual-only', note: 'Manual countdown remains the truthful public path unless a safe account/session-specific beta is separately accepted.' },
   ]
 
   useEffect(() => {
@@ -1192,7 +1194,7 @@ function App() {
               )}
               {linkedTvDevice.platform === 'home_assistant_webhook' && (
                 <p className="mode-caveat">
-                  Home Assistant webhook is for users already running HA locally. The recommended setup is a local-only HA webhook that triggers your own script/action, such as media_player.media_play. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Compatibility depends on your HA integration, device, and streaming app; manual countdown remains the fallback.
+                  Home Assistant webhook is not a D2C default path. It is only for users already running HA locally and stays outside public Remote Start support. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Manual countdown remains the fallback.
                 </p>
               )}
               <label className="field-label compact">
@@ -1301,7 +1303,7 @@ function App() {
                 <span>Use Remote Start at GO</span>
               </label>
               <p className="mode-caveat">
-                GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
+                Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
               </p>
               <div className="remote-button-row triple">
                 <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>

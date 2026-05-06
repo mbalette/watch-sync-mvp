@@ -9,8 +9,15 @@ export type LinkedTvPlatform =
   | 'home_assistant_webhook'
   | 'apple_tv_manual'
 
-export type PublicClaimLevel = 'supported' | 'beta' | 'advanced' | 'manual-only'
-export type PlatformStatusLabel = 'Supported' | 'Beta' | 'Advanced setup' | 'Manual-only'
+export type PublicClaimLevel = 'primary-beta' | 'guided-setup-beta' | 'reverse-engineered-beta' | 'account-pairing-beta' | 'later-beta' | 'manual-only' | 'not-supported-yet'
+export type PlatformStatusLabel = 'Remote Start beta / primary' | 'Remote Start beta' | 'Remote Start beta for supported Sony TVs' | 'Guided setup beta' | 'Reverse-engineered beta' | 'Account-pairing beta' | 'Later beta' | 'Manual-only' | 'Not supported yet'
+export type RemoteStartReadiness = 'not_configured' | 'needs_setup' | 'ready' | 'reconnect_needed' | 'test_failed' | 'manual_tonight' | 'unsupported' | 'unverified_hardware_behavior'
+
+export interface RemoteStartReadinessResult {
+  state: RemoteStartReadiness
+  label: 'Remote Start ready' | 'Reconnect needed' | 'Needs setup' | 'Manual countdown tonight' | 'Device behavior not verified yet' | 'Not supported yet'
+  reason: string
+}
 
 export interface RemoteStartCapability {
   canTestConnection: boolean
@@ -62,7 +69,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: false,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'supported',
+    publicClaimLevel: 'primary-beta',
     safeGoCommand: 'Play',
     manualFallbackRequired: true,
   },
@@ -75,7 +82,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'beta',
+    publicClaimLevel: 'primary-beta',
     safeGoCommand: 'ssap://media.controls/play',
     manualFallbackRequired: true,
   },
@@ -88,7 +95,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'beta',
+    publicClaimLevel: 'primary-beta',
     safeGoCommand: 'KEY_PLAY',
     manualFallbackRequired: true,
   },
@@ -101,7 +108,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: true,
     requiresAdvancedSetup: true,
     hardwareValidated: false,
-    publicClaimLevel: 'advanced',
+    publicClaimLevel: 'guided-setup-beta',
     safeGoCommand: 'KEYCODE_MEDIA_PLAY',
     manualFallbackRequired: true,
   },
@@ -114,7 +121,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'beta',
+    publicClaimLevel: 'primary-beta',
     safeGoCommand: 'IRCC Play code',
     manualFallbackRequired: true,
   },
@@ -127,7 +134,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: false,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'beta',
+    publicClaimLevel: 'later-beta',
     manualFallbackRequired: true,
   },
   vizio_smartcast: {
@@ -139,7 +146,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: 'beta',
+    publicClaimLevel: 'later-beta',
     safeGoCommand: 'play',
     manualFallbackRequired: true,
   },
@@ -152,7 +159,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     requiresPairing: false,
     requiresAdvancedSetup: true,
     hardwareValidated: false,
-    publicClaimLevel: 'advanced',
+    publicClaimLevel: 'not-supported-yet',
     safeGoCommand: 'Home Assistant media_play automation',
     manualFallbackRequired: true,
   },
@@ -171,14 +178,14 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
 }
 
 export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; status: PlatformStatusLabel; displayLabel?: string; helperLabel?: string; requiresSecret?: boolean }> = [
-  { id: 'roku', label: 'Roku / Roku TV / local streaming device', status: 'Supported' },
-  { id: 'lg_webos', label: 'LG webOS', status: 'Beta', requiresSecret: true },
-  { id: 'samsung', label: 'Samsung / Tizen', status: 'Beta', requiresSecret: true },
-  { id: 'android_adb', label: 'Fire TV / Android TV / Google TV ADB helper', displayLabel: 'Fire/Android/Google TV', helperLabel: 'ADB helper', status: 'Advanced setup' },
-  { id: 'sony_bravia', label: 'Sony / Bravia', status: 'Beta', requiresSecret: true },
-  { id: 'philips_jointspace', label: 'Philips JointSpace', status: 'Beta' },
-  { id: 'vizio_smartcast', label: 'Vizio SmartCast', status: 'Beta', requiresSecret: true },
-  { id: 'home_assistant_webhook', label: 'Home Assistant advanced bridge', status: 'Advanced setup' },
+  { id: 'roku', label: 'Roku / Roku TV', status: 'Remote Start beta / primary' },
+  { id: 'lg_webos', label: 'LG webOS', status: 'Remote Start beta / primary', requiresSecret: true },
+  { id: 'samsung', label: 'Samsung / Tizen', status: 'Remote Start beta', requiresSecret: true },
+  { id: 'android_adb', label: 'Fire TV / Android TV / Google TV', displayLabel: 'Fire/Android/Google TV', helperLabel: 'ADB helper', status: 'Guided setup beta' },
+  { id: 'sony_bravia', label: 'Sony / Bravia', status: 'Remote Start beta for supported Sony TVs', requiresSecret: true },
+  { id: 'philips_jointspace', label: 'Philips JointSpace', status: 'Later beta' },
+  { id: 'vizio_smartcast', label: 'Vizio SmartCast', status: 'Later beta', requiresSecret: true },
+  { id: 'home_assistant_webhook', label: 'Home Assistant local bridge', status: 'Not supported yet' },
   { id: 'apple_tv_manual', label: 'Apple TV', status: 'Manual-only' },
 ]
 
@@ -218,6 +225,38 @@ export function normalizeLinkedTvDevice(device: Partial<LinkedTvDevice>): Linked
     lastTestedAt: optionalTrim(device.lastTestedAt),
     useRemoteStartAtGo: device.useRemoteStartAtGo === true,
   }
+}
+
+
+export function getRemoteStartReadiness(deviceInput: LinkedTvDevice, lastHelperOk = Boolean(deviceInput.lastTestedAt)): RemoteStartReadinessResult {
+  const device = normalizeLinkedTvDevice(deviceInput)
+  const capability = getRemoteStartCapability(device.platform)
+  const missingConfig = device.platform === 'home_assistant_webhook'
+    ? !device.webhookUrl?.trim()
+    : platformNeedsHost(device.platform) && !device.host.trim()
+
+  if (capability.publicClaimLevel === 'not-supported-yet') {
+    return { state: 'unsupported', label: 'Not supported yet', reason: 'This platform is not currently a D2C Remote Start target.' }
+  }
+  if (capability.publicClaimLevel === 'manual-only' || !capability.canSendPlay) {
+    return { state: 'manual_tonight', label: 'Manual countdown tonight', reason: 'This platform stays manual-only unless a safe public control path is proven.' }
+  }
+  if (missingConfig) {
+    return { state: 'not_configured', label: 'Needs setup', reason: 'Add the local device/helper details before enabling Remote Start.' }
+  }
+  if (capability.requiresPairing && device.platform === 'lg_webos' && !device.clientKey) {
+    return { state: 'needs_setup', label: 'Needs setup', reason: 'LG webOS needs TV prompt pairing and a saved client key.' }
+  }
+  if (device.platform === 'sony_bravia' && !device.irccCode) {
+    return { state: 'needs_setup', label: 'Needs setup', reason: 'Sony Bravia needs IP Control enabled and a discovered Play IRCC code.' }
+  }
+  if (!lastHelperOk) {
+    return { state: 'reconnect_needed', label: 'Reconnect needed', reason: 'Run Pair/Test before movie night so the helper can confirm the device is reachable.' }
+  }
+  if (!capability.hardwareValidated) {
+    return { state: 'unverified_hardware_behavior', label: 'Device behavior not verified yet', reason: 'Mock/helper checks passed, but real TV/app behavior is still hardware-unverified.' }
+  }
+  return { state: 'ready', label: 'Remote Start ready', reason: 'Hardware validation and the local helper check are both current.' }
 }
 
 export function canUseRemoteStartAtGo(deviceInput: LinkedTvDevice): boolean {

@@ -9,9 +9,11 @@ export type TvRemoteTargetId =
   | 'vizio-smartcast-experimental'
   | 'vidaa-remotenow-research'
   | 'apple-tv-manual-only'
+  | 'xbox-account-pairing-beta'
+  | 'cable-isp-manual-only'
 
-export type TvRemoteBuildPriority = 'build-now' | 'next' | 'beta' | 'advanced-helper' | 'manual-only' | 'research'
-export type TvRemoteProtocolStatus = 'official' | 'semi-official' | 'unofficial' | 'session-scoped' | 'manual-only'
+export type TvRemoteBuildPriority = 'build-now' | 'primary-beta' | 'guided-setup-beta' | 'reverse-engineered-beta' | 'account-pairing-beta' | 'later-beta' | 'manual-only' | 'not-supported-yet' | 'research'
+export type TvRemoteProtocolStatus = 'official' | 'semi-official' | 'unofficial' | 'reverse-engineered' | 'account-pairing' | 'session-scoped' | 'manual-only' | 'not-supported-yet'
 
 export interface TvRemoteCommandSpec {
   id: string
@@ -44,7 +46,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   {
     id: 'roku-ecp',
     label: 'Roku / Roku TV',
-    priority: 'build-now',
+    priority: 'primary-beta',
     protocolStatus: 'official',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -56,14 +58,14 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
     commands: [
       { id: 'roku-play', label: 'Play', command: 'POST /keypress/Play', goSafe: true, notes: 'Current MVP GO command. Treat discrete Pause/PlayPause as unverified until docs + hardware prove it.' },
     ],
-    safeClaim: 'Supported Roku devices can receive a best-effort Play key after the user manually opens and pauses the show.',
+    safeClaim: 'Roku Remote Start beta can send local Play after the user manually opens and pauses the show; real TV/app behavior remains hardware-unverified.',
     caveats: ['No content selection or timestamp control.', 'Hosted HTTPS PWA may not be able to reach LAN HTTP directly.'],
     evidenceUrls: ['https://developer.roku.com/en-ca/docs/developer-program/dev-tools/external-control-api.md'],
   },
   {
     id: 'lg-webos-experimental',
     label: 'LG webOS',
-    priority: 'next',
+    priority: 'primary-beta',
     protocolStatus: 'semi-official',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -87,7 +89,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   {
     id: 'samsung-tizen-beta',
     label: 'Samsung Smart TV / Tizen',
-    priority: 'beta',
+    priority: 'primary-beta',
     protocolStatus: 'unofficial',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -100,7 +102,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
       { id: 'samsung-play', label: 'Play', command: 'KEY_PLAY', goSafe: true, notes: 'Experimental beta only; do not call official Samsung support.' },
       { id: 'samsung-pause', label: 'Pause', command: 'KEY_PAUSE', notes: 'Manual/test only until hardware matrix proves reliability.' },
     ],
-    safeClaim: 'Experimental Samsung beta may send generic remote keys after local TV approval on supported models.',
+    safeClaim: 'Samsung Remote Start beta may send generic remote keys after local TV approval on supported models; do not call it official or universally supported.',
     caveats: ['LAN protocol is community documented/unofficial for external apps.', 'Token and port behavior vary by model and firmware.'],
     evidenceUrls: [
       'https://developer.samsung.com/smarttv/develop/guides/user-interaction/remote-control.html',
@@ -111,7 +113,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   {
     id: 'cast-session',
     label: 'Chromecast / Google Cast session',
-    priority: 'next',
+    priority: 'manual-only',
     protocolStatus: 'session-scoped',
     implementedInHelper: false,
     hardwareValidated: false,
@@ -129,8 +131,8 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   },
   {
     id: 'adb-helper-advanced',
-    label: 'Android TV / Google TV / Fire TV ADB helper',
-    priority: 'advanced-helper',
+    label: 'Fire TV / Android TV / Google TV ADB helper',
+    priority: 'guided-setup-beta',
     protocolStatus: 'official',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -144,14 +146,14 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
       { id: 'adb-pause', label: 'ADB media pause', command: 'adb -s <host[:port]> shell input keyevent KEYCODE_MEDIA_PAUSE (127)', notes: 'Optional manual setup/test helper after ADB authorization.' },
       { id: 'adb-toggle', label: 'ADB play/pause toggle', command: 'adb shell input keyevent KEYCODE_MEDIA_PLAY_PAUSE (85)', riskyToggle: true, notes: 'Avoid for GO because duplicate toggles can pause instead of play.' },
     ],
-    safeClaim: 'Advanced helper mode can send media keys after the owner enables ADB debugging on their own device.',
-    caveats: ['Not consumer-friendly.', 'Should not be marketed as normal Fire TV/Android TV support.'],
+    safeClaim: 'Guided setup beta can send discrete ADB media Play after the owner enables debugging/pairing; some devices may need reconnect and Fire TV Vega is not supported yet.',
+    caveats: ['Guided wizard can help, but setup still uses developer/debugging concepts.', 'Should not be marketed as normal Fire TV/Android TV support.'],
     evidenceUrls: ['https://developer.android.com/tools/adb', 'https://developer.android.com/reference/android/view/KeyEvent', 'https://developer.amazon.com/docs/fire-tv/connecting-adb-to-device.html'],
   },
   {
     id: 'sony-bravia-beta',
     label: 'Sony / Bravia IP Control',
-    priority: 'beta',
+    priority: 'primary-beta',
     protocolStatus: 'official',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -170,7 +172,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   {
     id: 'philips-jointspace-experimental',
     label: 'Philips JointSpace',
-    priority: 'beta',
+    priority: 'later-beta',
     protocolStatus: 'semi-official',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -189,7 +191,7 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
   {
     id: 'vizio-smartcast-experimental',
     label: 'Vizio SmartCast',
-    priority: 'beta',
+    priority: 'later-beta',
     protocolStatus: 'unofficial',
     implementedInHelper: true,
     hardwareValidated: false,
@@ -229,15 +231,49 @@ export const TV_REMOTE_TARGETS: TvRemoteTargetSpec[] = [
     protocolStatus: 'manual-only',
     implementedInHelper: false,
     hardwareValidated: false,
-    pairing: 'No public App-Store-safe generic LAN remote path verified.',
+    pairing: 'No public App-Store-safe generic LAN remote path verified; pyatv-style pairing remains reverse-engineered beta only if separately accepted.',
     pwaFeasible: 'no',
     nativeFeasible: 'no',
     localHelperFeasible: 'limited',
-    exactProtocol: 'Unofficial/private protocol libraries exist; not a product path for App Store MVP.',
+    exactProtocol: 'pyatv-style reverse-engineered protocols exist but are not public headline support and are not implemented in the helper.',
     commands: [],
-    safeClaim: 'Manual countdown only unless a public App-Store-safe path is proven.',
-    caveats: ['Do not claim Apple TV remote support.'],
+    safeClaim: 'Manual countdown by default. Optional Apple TV beta requires explicit reverse-engineered-pairing acceptance and hardware validation.',
+    caveats: ['Do not claim official Apple TV remote support.', 'Do not use private Apple APIs.'],
     evidenceUrls: ['https://github.com/postlund/pyatv'],
+  },
+  {
+    id: 'xbox-account-pairing-beta',
+    label: 'Xbox One / Series account-pairing beta',
+    priority: 'manual-only',
+    protocolStatus: 'account-pairing',
+    implementedInHelper: false,
+    hardwareValidated: false,
+    pairing: 'Xbox account/OAuth-style setup plus console Remote Features; not D2C headline support.',
+    pwaFeasible: 'no',
+    nativeFeasible: 'limited',
+    localHelperFeasible: 'limited',
+    exactProtocol: 'Xbox Network/account-paired remote commands are possible through integrations, but no Watch Sync helper adapter is implemented.',
+    commands: [],
+    safeClaim: 'Manual countdown by default. Optional Xbox beta requires account/Remote Features acceptance and hardware validation.',
+    caveats: ['Do not headline Xbox support.', 'Requires account and console settings.'],
+    evidenceUrls: ['https://www.home-assistant.io/integrations/xbox/'],
+  },
+  {
+    id: 'cable-isp-manual-only',
+    label: 'Cable / ISP boxes',
+    priority: 'manual-only',
+    protocolStatus: 'manual-only',
+    implementedInHelper: false,
+    hardwareValidated: false,
+    pairing: 'No public generic third-party remote path established.',
+    pwaFeasible: 'no',
+    nativeFeasible: 'no',
+    localHelperFeasible: 'no',
+    exactProtocol: 'Provider-specific remotes only; Watch Sync public path is manual countdown.',
+    commands: [],
+    safeClaim: 'Manual countdown only.',
+    caveats: ['Do not claim direct control for Xfinity, Spectrum, Cox, DirecTV, or arbitrary ISP boxes.'],
+    evidenceUrls: [],
   },
 ]
 
@@ -252,7 +288,7 @@ export function helperAdvertisedTargets(): TvRemoteTargetId[] {
 }
 
 export function uiVisibleTargets(): TvRemoteTargetSpec[] {
-  return TV_REMOTE_TARGETS.filter((target) => target.priority !== 'manual-only' && target.priority !== 'research')
+  return TV_REMOTE_TARGETS.filter((target) => ['primary-beta', 'guided-setup-beta'].includes(target.priority))
 }
 
 export function safeGoCommand(targetId: TvRemoteTargetId): TvRemoteCommandSpec | undefined {

@@ -7,7 +7,7 @@ describe('TV remote target metadata', () => {
     expect(getTvRemoteTarget('roku-ecp')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('lg-webos-experimental')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
     expect(getTvRemoteTarget('samsung-tizen-beta')).toMatchObject({ implementedInHelper: true, hardwareValidated: false })
-    expect(getTvRemoteTarget('adb-helper-advanced')).toMatchObject({ implementedInHelper: true, hardwareValidated: false, priority: 'advanced-helper' })
+    expect(getTvRemoteTarget('adb-helper-advanced')).toMatchObject({ implementedInHelper: true, hardwareValidated: false, priority: 'guided-setup-beta' })
     expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('KEYCODE_MEDIA_PLAY (126)')
     expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('KEYCODE_MEDIA_PAUSE (127)')
     expect(getTvRemoteTarget('adb-helper-advanced').exactProtocol).toContain('Do not use KEYCODE_MEDIA_PLAY_PAUSE/85 for GO')
@@ -22,9 +22,9 @@ describe('TV remote target metadata', () => {
     expect(safeGoCommand('adb-helper-advanced')?.riskyToggle).not.toBe(true)
   })
 
-  it('classifies Samsung and Vizio as unofficial beta/experimental targets', () => {
-    expect(getTvRemoteTarget('samsung-tizen-beta')).toMatchObject({ protocolStatus: 'unofficial', priority: 'beta', hardwareValidated: false })
-    expect(getTvRemoteTarget('vizio-smartcast-experimental')).toMatchObject({ protocolStatus: 'unofficial', priority: 'beta', hardwareValidated: false })
+  it('classifies Samsung primary beta and Vizio later beta as unofficial targets', () => {
+    expect(getTvRemoteTarget('samsung-tizen-beta')).toMatchObject({ protocolStatus: 'unofficial', priority: 'primary-beta', hardwareValidated: false })
+    expect(getTvRemoteTarget('vizio-smartcast-experimental')).toMatchObject({ protocolStatus: 'unofficial', priority: 'later-beta', hardwareValidated: false })
   })
 
   it('keeps Apple TV manual-only and not UI-visible as remote support', () => {
@@ -44,6 +44,8 @@ describe('TV remote target metadata', () => {
       'vizio-smartcast-experimental',
       'vidaa-remotenow-research',
       'apple-tv-manual-only',
+      'xbox-account-pairing-beta',
+      'cable-isp-manual-only',
     ])
   })
 })

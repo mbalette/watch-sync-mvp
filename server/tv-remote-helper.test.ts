@@ -16,7 +16,7 @@ describe('TV remote helper endpoints', () => {
     const targets = await fetchJson(`${baseUrl}/targets`)
 
     expect(health.targets).toEqual(['roku-ecp', 'lg-webos-experimental', 'samsung-tizen-beta', 'adb-helper-advanced', 'sony-bravia-beta', 'philips-jointspace-experimental', 'vizio-smartcast-experimental'])
-    expect(targets.targets).toHaveLength(10)
+    expect(targets.targets).toHaveLength(12)
     expect(targets.targets.map((target: { id: string }) => target.id)).toContain('apple-tv-manual-only')
   })
 

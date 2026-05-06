@@ -6,6 +6,7 @@ import {
   buildDeviceTestRequest,
   canUseRemoteStartAtGo,
   getRemoteStartCapability,
+  getRemoteStartReadiness,
   normalizeLinkedTvDevice,
 } from './tv-remote-device'
 
@@ -19,7 +20,7 @@ describe('linked TV device helper routing', () => {
       canSendPlay: true,
       canSendPause: false,
       canAutoPlayAtGo: true,
-      publicClaimLevel: 'supported',
+      publicClaimLevel: 'primary-beta',
       safeGoCommand: 'Play',
       manualFallbackRequired: true,
     })
@@ -27,14 +28,14 @@ describe('linked TV device helper routing', () => {
 
   it('exposes requested platform statuses including advanced and manual-only choices', () => {
     expect(TV_PLATFORM_OPTIONS.map((option) => [option.id, option.status])).toEqual([
-      ['roku', 'Supported'],
-      ['lg_webos', 'Beta'],
-      ['samsung', 'Beta'],
-      ['android_adb', 'Advanced setup'],
-      ['sony_bravia', 'Beta'],
-      ['philips_jointspace', 'Beta'],
-      ['vizio_smartcast', 'Beta'],
-      ['home_assistant_webhook', 'Advanced setup'],
+      ['roku', 'Remote Start beta / primary'],
+      ['lg_webos', 'Remote Start beta / primary'],
+      ['samsung', 'Remote Start beta'],
+      ['android_adb', 'Guided setup beta'],
+      ['sony_bravia', 'Remote Start beta for supported Sony TVs'],
+      ['philips_jointspace', 'Later beta'],
+      ['vizio_smartcast', 'Later beta'],
+      ['home_assistant_webhook', 'Not supported yet'],
       ['apple_tv_manual', 'Manual-only'],
     ])
   })
@@ -91,11 +92,31 @@ describe('linked TV device helper routing', () => {
   it('routes Android/Fire/Google TV ADB helper through discrete Play and Pause only', () => {
     const device = normalizeLinkedTvDevice({ platform: 'android_adb', host: '192.168.1.50:5555', useRemoteStartAtGo: true })
 
-    expect(getRemoteStartCapability('android_adb')).toMatchObject({ requiresLocalHelper: true, requiresAdvancedSetup: true, publicClaimLevel: 'advanced', safeGoCommand: 'KEYCODE_MEDIA_PLAY' })
+    expect(getRemoteStartCapability('android_adb')).toMatchObject({ requiresLocalHelper: true, requiresAdvancedSetup: true, publicClaimLevel: 'guided-setup-beta', safeGoCommand: 'KEYCODE_MEDIA_PLAY' })
     expect(buildDeviceTestRequest(device)).toEqual({ path: '/adb/connect', method: 'POST', body: { host: '192.168.1.50:5555' } })
     expect(buildDevicePlayRequest(device)).toEqual({ path: '/adb/media-key', method: 'POST', body: { host: '192.168.1.50:5555', key: 'KEYCODE_MEDIA_PLAY' } })
     expect(buildDevicePauseRequest(device)).toEqual({ path: '/adb/media-key', method: 'POST', body: { host: '192.168.1.50:5555', key: 'KEYCODE_MEDIA_PAUSE' } })
     expect(JSON.stringify(buildDevicePlayRequest(device))).not.toContain('KEYCODE_MEDIA_PLAY_PAUSE')
+  })
+
+
+  it('classifies Remote Start readiness without upgrading unvalidated hardware to supported', () => {
+    expect(getRemoteStartReadiness(normalizeLinkedTvDevice({ platform: 'roku' }))).toMatchObject({
+      state: 'not_configured',
+      label: 'Needs setup',
+    })
+    expect(getRemoteStartReadiness(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2' }))).toMatchObject({
+      state: 'reconnect_needed',
+      label: 'Reconnect needed',
+    })
+    expect(getRemoteStartReadiness(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', lastTestedAt: '2026-05-05T00:00:00.000Z' }))).toMatchObject({
+      state: 'unverified_hardware_behavior',
+      label: 'Device behavior not verified yet',
+    })
+    expect(getRemoteStartReadiness(normalizeLinkedTvDevice({ platform: 'apple_tv_manual' }))).toMatchObject({
+      state: 'manual_tonight',
+      label: 'Manual countdown tonight',
+    })
   })
 
   it('routes Home Assistant webhook test and play through the local helper without requiring a host', () => {
