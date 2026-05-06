@@ -196,6 +196,7 @@ function App() {
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
+  const selectedTvPlatformOption = TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform)
   const tvRemoteRoadmap = [
     { label: 'Roku/local streaming device', status: 'Supported', note: 'Sends a discrete Play key via local helper; no pause claim.' },
     { label: 'LG webOS', status: 'Beta', note: 'Local helper pairing + SSAP Play/Pause; hardware validation still pending.' },
@@ -1202,9 +1203,16 @@ function App() {
                   aria-label="TV remote platform"
                 >
                   {TV_PLATFORM_OPTIONS.map((option) => (
-                    <option key={option.id} value={option.id}>{option.label} — {option.status}</option>
+                    <option key={option.id} value={option.id}>{option.displayLabel ?? `${option.label} — ${option.status}`}</option>
                   ))}
                 </select>
+                {selectedTvPlatformOption && (
+                  <small className="platform-picker-note">
+                    {selectedTvPlatformOption.label}
+                    {selectedTvPlatformOption.helperLabel ? ` · ${selectedTvPlatformOption.helperLabel}` : ''}
+                    {' · '}{selectedTvPlatformOption.status}
+                  </small>
+                )}
               </label>
               {linkedTvDevice.platform === 'home_assistant_webhook' ? (
                 <label className="field-label compact">

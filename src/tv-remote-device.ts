@@ -170,11 +170,11 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
   },
 }
 
-export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; status: PlatformStatusLabel; requiresSecret?: boolean }> = [
+export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; status: PlatformStatusLabel; displayLabel?: string; helperLabel?: string; requiresSecret?: boolean }> = [
   { id: 'roku', label: 'Roku / Roku TV / local streaming device', status: 'Supported' },
   { id: 'lg_webos', label: 'LG webOS', status: 'Beta', requiresSecret: true },
   { id: 'samsung', label: 'Samsung / Tizen', status: 'Beta', requiresSecret: true },
-  { id: 'android_adb', label: 'Fire TV / Android TV / Google TV ADB helper', status: 'Advanced setup' },
+  { id: 'android_adb', label: 'Fire TV / Android TV / Google TV ADB helper', displayLabel: 'Fire/Android/Google TV', helperLabel: 'ADB helper', status: 'Advanced setup' },
   { id: 'sony_bravia', label: 'Sony / Bravia', status: 'Beta', requiresSecret: true },
   { id: 'philips_jointspace', label: 'Philips JointSpace', status: 'Beta' },
   { id: 'vizio_smartcast', label: 'Vizio SmartCast', status: 'Beta', requiresSecret: true },
