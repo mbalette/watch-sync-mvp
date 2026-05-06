@@ -27,6 +27,7 @@ import {
   getRemoteStartReadiness,
   getRemoteStartWizard,
   isAllowedLocalHelperUrl,
+  REMOTE_START_ONBOARDING_CHOICES,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -1208,10 +1209,42 @@ function App() {
                   Home Assistant webhook is not a D2C default path. It is only for users already running HA locally and stays outside public Remote Start support. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Manual countdown remains the fallback.
                 </p>
               )}
+              <section className="remote-onboarding-flow" aria-label="Choose your TV for Remote Start">
+                <div className="onboarding-heading">
+                  <span className="wizard-kicker">Step 1</span>
+                  <h3>Which TV are you watching on?</h3>
+                  <p>Pick the device family first. Watch Sync will show the right setup path and keep manual countdown available if your device is not ready.</p>
+                </div>
+                <div className="tv-choice-grid">
+                  {REMOTE_START_ONBOARDING_CHOICES.map((choice) => {
+                    const active = linkedTvDevice.platform === choice.platform
+                    return (
+                      <button
+                        key={choice.platform}
+                        type="button"
+                        className={`tv-choice-card ${active ? 'active' : ''}`}
+                        aria-pressed={active}
+                        onClick={() => {
+                          updateLinkedDevice({ platform: choice.platform, label: TV_PLATFORM_OPTIONS.find((option) => option.id === choice.platform)?.label ?? choice.title })
+                          setShowRemoteSetupDetails(false)
+                        }}
+                      >
+                        <span className="tv-choice-icon" aria-hidden="true">{choice.icon}</span>
+                        <span className="tv-choice-copy">
+                          <strong>{choice.title}</strong>
+                          <small>{choice.setupPreview}</small>
+                        </span>
+                        <span className={`tv-choice-badge ${choice.recommended ? 'recommended' : 'manual'}`}>{choice.badge}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <p className="selected-tv-hint"><strong>Selected:</strong> {selectedTvPlatformOption?.label ?? linkedTvDevice.label}. {REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === linkedTvDevice.platform)?.nextCopy ?? 'Follow the guided setup below.'}</p>
+              </section>
               <section className="remote-setup-wizard" aria-label={`${remoteStartWizard.title} wizard`}>
                 <div className="wizard-heading-row">
                   <div>
-                    <span className="wizard-kicker">Setup wizard</span>
+                    <span className="wizard-kicker">Step 2 · Setup wizard</span>
                     <h3>{remoteStartWizard.title}</h3>
                   </div>
                   <span className={`wizard-status ${remoteStartWizard.label === 'Manual-only' ? 'manual' : remoteStartWizard.label === 'Guided setup beta' ? 'guided' : remoteStartWizard.label === 'Not supported yet' ? 'unsupported' : 'beta'}`}>{remoteStartWizard.label}</span>
@@ -1246,7 +1279,7 @@ function App() {
                 <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
               </section>
               <label className="field-label compact">
-                <span>Platform</span>
+                <span>Advanced: exact platform</span>
                 <select
                   value={linkedTvDevice.platform}
                   onChange={(event) => updateLinkedDevice({ platform: event.target.value as LinkedTvDevice['platform'], label: TV_PLATFORM_OPTIONS.find((option) => option.id === event.target.value)?.label ?? 'Linked TV' })}

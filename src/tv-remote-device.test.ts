@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  REMOTE_START_ONBOARDING_CHOICES,
   TV_PLATFORM_OPTIONS,
   buildDevicePauseRequest,
   buildDevicePlayRequest,
@@ -42,6 +43,21 @@ describe('linked TV device helper routing', () => {
     ])
   })
 
+
+
+
+  it('offers a consumer onboarding picker before technical setup fields', () => {
+    expect(REMOTE_START_ONBOARDING_CHOICES.map((choice) => [choice.platform, choice.title, choice.recommended])).toEqual([
+      ['roku', 'Roku / Roku TV', true],
+      ['lg_webos', 'LG TV', true],
+      ['samsung', 'Samsung TV', true],
+      ['sony_bravia', 'Sony Bravia TV', true],
+      ['android_adb', 'Fire / Android / Google TV', true],
+      ['apple_tv_manual', 'Apple TV / not sure', false],
+    ])
+    expect(REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === 'apple_tv_manual')?.nextCopy).toMatch(/manual countdown/i)
+    expect(REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === 'android_adb')?.setupPreview).toMatch(/guided setup beta/i)
+  })
 
   it('provides device-specific guided setup wizard steps and actions', () => {
     expect(getRemoteStartWizard('roku')).toMatchObject({

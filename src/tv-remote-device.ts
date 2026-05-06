@@ -72,6 +72,17 @@ export interface HelperRequestSpec {
   unsafeReason?: string
 }
 
+
+export interface RemoteStartOnboardingChoice {
+  platform: LinkedTvPlatform
+  title: string
+  badge: PlatformStatusLabel
+  icon: string
+  setupPreview: string
+  nextCopy: string
+  recommended: boolean
+}
+
 export const LINKED_TV_DEVICE_KEY = 'watch-sync.linkedTvDevice.v1'
 
 const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability> = {
@@ -189,6 +200,64 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     manualFallbackRequired: true,
   },
 }
+
+
+export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
+  {
+    platform: 'roku',
+    title: 'Roku / Roku TV',
+    badge: 'Remote Start beta / primary',
+    icon: '▣',
+    setupPreview: 'Usually easiest: enter the Roku IP, save, then Test Play.',
+    nextCopy: 'Pick Roku if your TV or streaming stick says Roku.',
+    recommended: true,
+  },
+  {
+    platform: 'lg_webos',
+    title: 'LG TV',
+    badge: 'Remote Start beta / primary',
+    icon: 'LG',
+    setupPreview: 'Pair on the TV prompt, save the local client key, then Test Play.',
+    nextCopy: 'Pick this for LG webOS smart TVs.',
+    recommended: true,
+  },
+  {
+    platform: 'samsung',
+    title: 'Samsung TV',
+    badge: 'Remote Start beta',
+    icon: 'S',
+    setupPreview: 'Approve the TV prompt/token if shown, then Test Play.',
+    nextCopy: 'Pick this for Samsung/Tizen smart TVs.',
+    recommended: true,
+  },
+  {
+    platform: 'sony_bravia',
+    title: 'Sony Bravia TV',
+    badge: 'Remote Start beta for supported Sony TVs',
+    icon: 'B',
+    setupPreview: 'Enable IP Control on supported Bravia models, then discover/test Play.',
+    nextCopy: 'Pick this for Sony Bravia TVs with IP Control.',
+    recommended: true,
+  },
+  {
+    platform: 'android_adb',
+    title: 'Fire / Android / Google TV',
+    badge: 'Guided setup beta',
+    icon: 'TV',
+    setupPreview: 'Guided setup beta: turn on debugging, connect ADB, then Test Play.',
+    nextCopy: 'Pick this for Fire TV Stick/Cube, Chromecast with Google TV, Google TV Streamer, Onn, or Shield.',
+    recommended: true,
+  },
+  {
+    platform: 'apple_tv_manual',
+    title: 'Apple TV / not sure',
+    badge: 'Manual-only',
+    icon: '',
+    setupPreview: 'No direct Remote Start claim yet. Use manual countdown tonight.',
+    nextCopy: 'If your device is not listed, use manual countdown. It still works with any TV.',
+    recommended: false,
+  },
+]
 
 export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; status: PlatformStatusLabel; displayLabel?: string; helperLabel?: string; requiresSecret?: boolean }> = [
   { id: 'roku', label: 'Roku / Roku TV', status: 'Remote Start beta / primary' },
