@@ -150,6 +150,7 @@ function App() {
   const [showSetupSheet, setShowSetupSheet] = useState(false)
   const [showLaptopDrawer, setShowLaptopDrawer] = useState(false)
   const [showTvRemoteDrawer, setShowTvRemoteDrawer] = useState(false)
+  const [showRemoteSetupDetails, setShowRemoteSetupDetails] = useState(false)
   const [showRecommendDrawer, setShowRecommendDrawer] = useState(false)
   const [showChat, setShowChat] = useState(false)
   const [chatDraft, setChatDraft] = useState('')
@@ -199,10 +200,14 @@ function App() {
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
   const isPublicRemoteStartLane = tvCapability.publicClaimLevel === 'primary-beta' || tvCapability.publicClaimLevel === 'guided-setup-beta'
+  const linkedTvMissingConfig = linkedTvDevice.platform === 'home_assistant_webhook'
+    ? !linkedTvDevice.webhookUrl?.trim()
+    : platformNeedsHost(linkedTvDevice.platform) && !linkedTvDevice.host.trim()
   const hasRecentHelperCheck = Boolean(linkedTvDevice.lastTestedAt)
+  const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
+  const canRunConnectionCheck = isPublicRemoteStartLane && tvCapability.canTestConnection && !linkedTvMissingConfig
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
   const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
-  const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
   const selectedTvPlatformOption = TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform)
   const tvRemoteRoadmap = [
     { label: 'Roku / Roku TV', status: 'Remote Start beta / primary', note: 'Local ECP Play at GO; some Roku OS builds require Control by mobile apps/network access.' },
@@ -1215,7 +1220,8 @@ function App() {
                 <ol className="wizard-steps">
                   {remoteStartWizard.steps.map((step) => <li key={step}>{step}</li>)}
                 </ol>
-                <dl className="wizard-facts">
+                <button className="details-toggle" type="button" onClick={() => setShowRemoteSetupDetails((current) => !current)}>{showRemoteSetupDetails ? 'Hide setup details' : 'Show setup details'}</button>
+                {showRemoteSetupDetails && <dl className="wizard-facts">
                   <div>
                     <dt>TV setting</dt>
                     <dd>{remoteStartWizard.tvSideSetting}</dd>
@@ -1232,10 +1238,10 @@ function App() {
                     <dt>Pause / toggle policy</dt>
                     <dd>{remoteStartWizard.pausePolicy} {remoteStartWizard.togglePolicy}</dd>
                   </div>
-                </dl>
+                </dl>}
                 <div className="wizard-action-row">
-                  <strong>Next action:</strong>
-                  <span>{remoteStartWizard.primaryAction}</span>
+                  <strong>Setup path:</strong>
+                  <span>Save setup → connect/test → enable GO Play</span>
                 </div>
                 <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
               </section>
@@ -1340,13 +1346,13 @@ function App() {
               )}
               <div className="setup-sequence" aria-label="Remote Start setup sequence">
                 <span><strong>1</strong> Save setup</span>
-                <span><strong>2</strong> Check connection</span>
+                <span><strong>2</strong> {linkedTvMissingConfig ? 'Enter details' : 'Check connection'}</span>
                 <span><strong>3</strong> Enable GO Play</span>
               </div>
               <div className="remote-button-row triple primary-setup-actions">
                 <button type="button" onClick={() => saveLinkedDevice()}>1 Save setup</button>
                 {isPublicRemoteStartLane ? (
-                  <button type="button" onClick={testLinkedDevice} disabled={!tvCapability.canTestConnection}>2 {remoteStartWizard.primaryAction}</button>
+                  <button type="button" onClick={testLinkedDevice} disabled={!canRunConnectionCheck}>2 {linkedTvMissingConfig ? 'Enter details first' : remoteStartWizard.primaryAction}</button>
                 ) : (
                   <button type="button" disabled>Use manual countdown</button>
                 )}
@@ -1371,11 +1377,13 @@ function App() {
                 Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : hasRecentHelperCheck ? 'off or unavailable for unsupported/later/manual lanes — manual countdown remains active.' : 'test the connection first, then enable GO Play if this lane supports it.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
               </p>
               <div className="extension-status">{tvRemoteStatus}</div>
-              <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">
-                {tvRemoteRoadmap.map((target) => (
-                  <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
-                ))}
-              </div>
+              {showRemoteSetupDetails && (
+                <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">
+                  {tvRemoteRoadmap.map((target) => (
+                    <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
+                  ))}
+                </div>
+              )}
               <p className="mode-caveat">Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Helper calls are limited to localhost/private LAN/.local helper URLs before local pairing details are sent. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
             </div>
           )}
