@@ -160,7 +160,7 @@ function App() {
   const [copyStatus, setCopyStatus] = useState('')
   const [showSetupSheet, setShowSetupSheet] = useState(false)
   const [showLaptopDrawer, setShowLaptopDrawer] = useState(false)
-  const [showTvRemoteDrawer, setShowTvRemoteDrawer] = useState(false)
+  const [showTvRemoteDrawer, setShowTvRemoteDrawer] = useState(() => !loadLinkedTvDevice())
   const [showRemoteSetupDetails, setShowRemoteSetupDetails] = useState(false)
   const [showRecommendDrawer, setShowRecommendDrawer] = useState(false)
   const [showChat, setShowChat] = useState(false)
@@ -1016,8 +1016,9 @@ function App() {
           <button className="secondary-action" type="button" onClick={() => openRecommendDrawer(!showRecommendDrawer)} aria-expanded={showRecommendDrawer}>
             Find watch
           </button>
-          <button className="secondary-action" type="button" onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
-            TV remote + Remote Start
+          <button className="secondary-action remote-start-shortcut" type="button" onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
+            <span>What are you using to watch?</span>
+            <small>Remote Start setup</small>
           </button>
         </div>
 
@@ -1215,8 +1216,8 @@ function App() {
             onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)}
             aria-expanded={showTvRemoteDrawer}
           >
-            <span>Remote Start</span>
-            <small>Local Play at GO, opt-in only</small>
+            <span>Remote Start setup</span>
+            <small>What are you using to watch?</small>
           </button>
 
           {showTvRemoteDrawer && (
