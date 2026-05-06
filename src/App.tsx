@@ -28,6 +28,7 @@ import {
   getRemoteStartWizard,
   isAllowedLocalHelperUrl,
   REMOTE_START_ONBOARDING_CHOICES,
+  REMOTE_START_WATCHING_METHOD_CHOICES,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -36,6 +37,7 @@ import {
   saveLinkedTvDevice,
   TV_PLATFORM_OPTIONS,
   type LinkedTvDevice,
+  type RemoteStartWatchingMethod,
 } from './tv-remote-device'
 import {
   buildRecommendationDiscoverApiUrl,
@@ -53,6 +55,14 @@ const RECOMMENDATION_PROVIDERS_KEY = 'watch-sync.recommendationProviders'
 const RECOMMENDATION_REGION_KEY = 'watch-sync.recommendationRegion'
 const storageKey = (roomId: string) => `watch-sync.room.${roomId}`
 const realtimeUrl = import.meta.env.VITE_REALTIME_URL || 'ws://127.0.0.1:8787'
+
+
+function inferWatchingMethod(platform: LinkedTvDevice['platform']): RemoteStartWatchingMethod {
+  if (platform === 'lg_webos' || platform === 'samsung' || platform === 'sony_bravia') return 'built_in_tv_app'
+  if (platform === 'apple_tv_manual') return 'streaming_stick_or_box'
+  if (platform === 'roku' || platform === 'android_adb') return 'streaming_stick_or_box'
+  return 'game_console_or_other'
+}
 
 function loadRecommendationProviders(): string[] {
   const raw = localStorage.getItem(RECOMMENDATION_PROVIDERS_KEY)
@@ -164,7 +174,12 @@ function App() {
   const [recommendationStatus, setRecommendationStatus] = useState('Showing a safe mock catalog. Live TMDB search is optional once a server token is configured.')
   const [recommendationSource, setRecommendationSource] = useState<'mock' | 'tmdb'>('mock')
   const [linkedTvDevice, setLinkedTvDevice] = useState<LinkedTvDevice>(() => loadLinkedTvDevice() ?? normalizeLinkedTvDevice({ platform: 'roku' }))
-  const [tvRemoteStatus, setTvRemoteStatus] = useState('No linked TV yet. Choose a platform, enter local helper details, then save/test.')
+  const [remoteWatchingMethod, setRemoteWatchingMethod] = useState<RemoteStartWatchingMethod | ''>(() => {
+    const saved = loadLinkedTvDevice()
+    return saved ? inferWatchingMethod(saved.platform) : ''
+  })
+  const [hasChosenRemotePlatform, setHasChosenRemotePlatform] = useState(() => Boolean(loadLinkedTvDevice()))
+  const [tvRemoteStatus, setTvRemoteStatus] = useState('No linked TV yet. Start with how you watch, pick your device, then follow the setup steps.')
   const [countdownText, setCountdownText] = useState('3')
   const [transportStatus, setTransportStatus] = useState<TransportStatus>('idle')
   const transportRef = useRef<RoomTransport | null>(null)
@@ -207,9 +222,17 @@ function App() {
   const hasRecentHelperCheck = Boolean(linkedTvDevice.lastTestedAt)
   const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
   const canRunConnectionCheck = isPublicRemoteStartLane && tvCapability.canTestConnection && !linkedTvMissingConfig
+  const canSaveRemoteSetup = !isPublicRemoteStartLane || !linkedTvMissingConfig
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
   const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
-  const selectedTvPlatformOption = TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform)
+  const selectedTvPlatformOption = hasChosenRemotePlatform ? TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform) : undefined
+  const selectedRemoteChoice = hasChosenRemotePlatform ? REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === linkedTvDevice.platform) : undefined
+  const visibleRemoteChoices = remoteWatchingMethod
+    ? REMOTE_START_ONBOARDING_CHOICES.filter((choice) => choice.watchingMethods.includes(remoteWatchingMethod))
+    : []
+  const selectedWatchingMethod = remoteWatchingMethod
+    ? REMOTE_START_WATCHING_METHOD_CHOICES.find((choice) => choice.id === remoteWatchingMethod)
+    : undefined
   const tvRemoteRoadmap = [
     { label: 'Roku / Roku TV', status: 'Remote Start beta / primary', note: 'Local ECP Play at GO; some Roku OS builds require Control by mobile apps/network access.' },
     { label: 'LG webOS', status: 'Remote Start beta / primary', note: 'Pair on TV prompt, save client key locally, then Test Play/Pause. Hardware validation pending.' },
@@ -1201,88 +1224,142 @@ function App() {
               <p>
                 Remote Start is local device control at countdown GO. Everyone still opens the title themselves in their own streaming app, pauses at the sync point, readies up, and uses manual countdown as the universal fallback. If enabled below, Watch Sync sends one local Play command at GO only when the selected platform has a safe discrete Play path.
               </p>
-              {tvCapability.publicClaimLevel === 'manual-only' && (
+              {hasChosenRemotePlatform && tvCapability.publicClaimLevel === 'manual-only' && (
                 <p className="mode-caveat">{linkedTvDevice.label} is manual-only here. Watch Sync does not claim direct control for this platform.</p>
               )}
-              {linkedTvDevice.platform === 'home_assistant_webhook' && (
+              {hasChosenRemotePlatform && linkedTvDevice.platform === 'home_assistant_webhook' && (
                 <p className="mode-caveat">
                   Home Assistant webhook is not a D2C default path. It is only for users already running HA locally and stays outside public Remote Start support. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Manual countdown remains the fallback.
                 </p>
               )}
-              <section className="remote-onboarding-flow" aria-label="Choose your TV for Remote Start">
+              <section className="remote-onboarding-flow" aria-label="Remote Start onboarding">
                 <div className="onboarding-heading">
                   <span className="wizard-kicker">Step 1</span>
-                  <h3>Which TV are you watching on?</h3>
-                  <p>Pick the device family first. Watch Sync will show the right setup path and keep manual countdown available if your device is not ready.</p>
+                  <h3>What are you using to watch?</h3>
+                  <p>Start here. Pick the thing actually playing Netflix/Hulu/Prime/YouTube, then Watch Sync will narrow the setup to the right device.</p>
                 </div>
-                <div className="tv-choice-grid">
-                  {REMOTE_START_ONBOARDING_CHOICES.map((choice) => {
-                    const active = linkedTvDevice.platform === choice.platform
+                <div className="tv-choice-grid method-choice-grid">
+                  {REMOTE_START_WATCHING_METHOD_CHOICES.map((choice) => {
+                    const active = remoteWatchingMethod === choice.id
                     return (
                       <button
-                        key={choice.platform}
+                        key={choice.id}
                         type="button"
-                        className={`tv-choice-card ${active ? 'active' : ''}`}
+                        className={`tv-choice-card method-choice-card ${active ? 'active' : ''}`}
                         aria-pressed={active}
                         onClick={() => {
-                          updateLinkedDevice({ platform: choice.platform, label: TV_PLATFORM_OPTIONS.find((option) => option.id === choice.platform)?.label ?? choice.title })
+                          setRemoteWatchingMethod(choice.id)
+                          setHasChosenRemotePlatform(false)
                           setShowRemoteSetupDetails(false)
                         }}
                       >
                         <span className="tv-choice-icon" aria-hidden="true">{choice.icon}</span>
                         <span className="tv-choice-copy">
                           <strong>{choice.title}</strong>
-                          <small>{choice.setupPreview}</small>
+                          <small>{choice.helper}</small>
                         </span>
-                        <span className={`tv-choice-badge ${choice.recommended ? 'recommended' : 'manual'}`}>{choice.badge}</span>
                       </button>
                     )
                   })}
                 </div>
-                <p className="selected-tv-hint"><strong>Selected:</strong> {selectedTvPlatformOption?.label ?? linkedTvDevice.label}. {REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === linkedTvDevice.platform)?.nextCopy ?? 'Follow the guided setup below.'}</p>
+                {selectedWatchingMethod && <p className="selected-tv-hint"><strong>Good.</strong> {selectedWatchingMethod.nextCopy}</p>}
               </section>
-              <section className="remote-setup-wizard" aria-label={`${remoteStartWizard.title} wizard`}>
-                <div className="wizard-heading-row">
-                  <div>
-                    <span className="wizard-kicker">Step 2 · Setup wizard</span>
-                    <h3>{remoteStartWizard.title}</h3>
-                  </div>
-                  <span className={`wizard-status ${remoteStartWizard.label === 'Manual-only' ? 'manual' : remoteStartWizard.label === 'Guided setup beta' ? 'guided' : remoteStartWizard.label === 'Not supported yet' ? 'unsupported' : 'beta'}`}>{remoteStartWizard.label}</span>
+
+              <section className={`remote-onboarding-flow ${remoteWatchingMethod ? '' : 'disabled-step'}`} aria-label="Choose your TV or streaming device for Remote Start">
+                <div className="onboarding-heading">
+                  <span className="wizard-kicker">Step 2</span>
+                  <h3>{remoteWatchingMethod ? 'Which device is it?' : 'Pick how you watch first'}</h3>
+                  <p>{remoteWatchingMethod ? 'Tap the closest match. Nothing connects until you choose one and save/test it.' : 'This step unlocks after Step 1 so the app does not default to Roku or any other device.'}</p>
                 </div>
-                <p>{remoteStartWizard.summary}</p>
-                <ol className="wizard-steps">
-                  {remoteStartWizard.steps.map((step) => <li key={step}>{step}</li>)}
-                </ol>
-                <button className="details-toggle" type="button" onClick={() => setShowRemoteSetupDetails((current) => !current)}>{showRemoteSetupDetails ? 'Hide setup details' : 'Show setup details'}</button>
-                {showRemoteSetupDetails && <dl className="wizard-facts">
-                  <div>
-                    <dt>TV setting</dt>
-                    <dd>{remoteStartWizard.tvSideSetting}</dd>
+                {remoteWatchingMethod ? (
+                  <div className="tv-choice-grid">
+                    {visibleRemoteChoices.map((choice) => {
+                      const active = hasChosenRemotePlatform && linkedTvDevice.platform === choice.platform
+                      return (
+                        <button
+                          key={choice.platform}
+                          type="button"
+                          className={`tv-choice-card ${active ? 'active' : ''}`}
+                          aria-pressed={active}
+                          onClick={() => {
+                            updateLinkedDevice({ platform: choice.platform, label: TV_PLATFORM_OPTIONS.find((option) => option.id === choice.platform)?.label ?? choice.title })
+                            setHasChosenRemotePlatform(true)
+                            setShowRemoteSetupDetails(false)
+                          }}
+                        >
+                          <span className="tv-choice-icon" aria-hidden="true">{choice.icon}</span>
+                          <span className="tv-choice-copy">
+                            <strong>{choice.title}</strong>
+                            <small>{choice.setupPreview}</small>
+                          </span>
+                          <span className={`tv-choice-badge ${choice.recommended ? 'recommended' : 'manual'}`}>{choice.badge}</span>
+                        </button>
+                      )
+                    })}
                   </div>
-                  <div>
-                    <dt>Reconnect expectation</dt>
-                    <dd>{remoteStartWizard.pairingPersistence}</dd>
-                  </div>
-                  <div>
-                    <dt>GO command</dt>
-                    <dd>{remoteStartWizard.safeGoCommand}</dd>
-                  </div>
-                  <div>
-                    <dt>Pause / toggle policy</dt>
-                    <dd>{remoteStartWizard.pausePolicy} {remoteStartWizard.togglePolicy}</dd>
-                  </div>
-                </dl>}
-                <div className="wizard-action-row">
-                  <strong>Setup path:</strong>
-                  <span>Save setup → connect/test → enable GO Play</span>
-                </div>
-                <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
+                ) : (
+                  <div className="empty-next-step">Choose TV app, streaming stick/box, or not sure above.</div>
+                )}
+                {hasChosenRemotePlatform && selectedRemoteChoice && <p className="selected-tv-hint"><strong>Selected:</strong> {selectedRemoteChoice.title}. {selectedRemoteChoice.nextCopy}</p>}
               </section>
+
+              {hasChosenRemotePlatform ? (
+                <section className="remote-setup-wizard" aria-label={`${remoteStartWizard.title} wizard`}>
+                  <div className="wizard-heading-row">
+                    <div>
+                      <span className="wizard-kicker">Step 3 · Connect it</span>
+                      <h3>{remoteStartWizard.title}</h3>
+                    </div>
+                    <span className={`wizard-status ${remoteStartWizard.label === 'Manual-only' ? 'manual' : remoteStartWizard.label === 'Guided setup beta' ? 'guided' : remoteStartWizard.label === 'Not supported yet' ? 'unsupported' : 'beta'}`}>{remoteStartWizard.label}</span>
+                  </div>
+                  <p>{remoteStartWizard.summary}</p>
+                  <ol className="wizard-steps">
+                    {remoteStartWizard.steps.map((step) => <li key={step}>{step}</li>)}
+                  </ol>
+                  <button className="details-toggle" type="button" onClick={() => setShowRemoteSetupDetails((current) => !current)}>{showRemoteSetupDetails ? 'Hide setup details' : 'Show setup details'}</button>
+                  {showRemoteSetupDetails && <dl className="wizard-facts">
+                    <div>
+                      <dt>TV setting</dt>
+                      <dd>{remoteStartWizard.tvSideSetting}</dd>
+                    </div>
+                    <div>
+                      <dt>Reconnect expectation</dt>
+                      <dd>{remoteStartWizard.pairingPersistence}</dd>
+                    </div>
+                    <div>
+                      <dt>GO command</dt>
+                      <dd>{remoteStartWizard.safeGoCommand}</dd>
+                    </div>
+                    <div>
+                      <dt>Pause / toggle policy</dt>
+                      <dd>{remoteStartWizard.pausePolicy} {remoteStartWizard.togglePolicy}</dd>
+                    </div>
+                  </dl>}
+                  <div className="wizard-action-row">
+                    <strong>What next:</strong>
+                    <span>Enter the local details below → Save setup → Test Play → enable GO Play if it works.</span>
+                  </div>
+                  <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
+                </section>
+              ) : (
+                <section className="remote-setup-wizard empty-wizard" aria-label="Remote Start setup locked until device selection">
+                  <span className="wizard-kicker">Step 3 · Connect it</span>
+                  <h3>No device selected yet</h3>
+                  <p>Pick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that.</p>
+                </section>
+              )}
+              {hasChosenRemotePlatform && (
+                <>
               <label className="field-label compact">
                 <span>Advanced: exact platform</span>
                 <select
                   value={linkedTvDevice.platform}
-                  onChange={(event) => updateLinkedDevice({ platform: event.target.value as LinkedTvDevice['platform'], label: TV_PLATFORM_OPTIONS.find((option) => option.id === event.target.value)?.label ?? 'Linked TV' })}
+                  onChange={(event) => {
+                    const platform = event.target.value as LinkedTvDevice['platform']
+                    updateLinkedDevice({ platform, label: TV_PLATFORM_OPTIONS.find((option) => option.id === platform)?.label ?? 'Linked TV' })
+                    setRemoteWatchingMethod(inferWatchingMethod(platform))
+                    setHasChosenRemotePlatform(true)
+                  }}
                   aria-label="TV remote platform"
                 >
                   {TV_PLATFORM_OPTIONS.map((option) => (
@@ -1377,15 +1454,14 @@ function App() {
                   <input value={linkedTvDevice.apiVersion ?? 6} onChange={(event) => updateLinkedDevice({ apiVersion: Number(event.target.value) || 6 })} inputMode="numeric" aria-label="Philips JointSpace API version" />
                 </label>
               )}
-              <div className="setup-sequence" aria-label="Remote Start setup sequence">
-                <span><strong>1</strong> Save setup</span>
-                <span><strong>2</strong> {linkedTvMissingConfig ? 'Enter details' : 'Check connection'}</span>
-                <span><strong>3</strong> Enable GO Play</span>
+              <div className="wizard-action-row setup-next-line" aria-label="Remote Start setup sequence">
+                <strong>Next:</strong>
+                <span>{linkedTvMissingConfig ? 'Enter the device details above, then save setup.' : 'Save setup, test Play, then enable GO Play only if the test works.'}</span>
               </div>
               <div className="remote-button-row triple primary-setup-actions">
-                <button type="button" onClick={() => saveLinkedDevice()}>1 Save setup</button>
+                <button type="button" onClick={() => saveLinkedDevice()} disabled={!canSaveRemoteSetup}>{linkedTvMissingConfig ? 'Save setup after details' : 'Save setup'}</button>
                 {isPublicRemoteStartLane ? (
-                  <button type="button" onClick={testLinkedDevice} disabled={!canRunConnectionCheck}>2 {linkedTvMissingConfig ? 'Enter details first' : remoteStartWizard.primaryAction}</button>
+                  <button type="button" onClick={testLinkedDevice} disabled={!canRunConnectionCheck}>{linkedTvMissingConfig ? 'Test Play after details' : remoteStartWizard.primaryAction}</button>
                 ) : (
                   <button type="button" disabled>Use manual countdown</button>
                 )}
@@ -1416,6 +1492,8 @@ function App() {
                     <span key={target.label}><strong>{target.label} — {target.status}:</strong> {target.note}</span>
                   ))}
                 </div>
+              )}
+                </>
               )}
               <p className="mode-caveat">Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Helper calls are limited to localhost/private LAN/.local helper URLs before local pairing details are sent. Manual countdown always works. Hosted mobile Safari/Chrome may block local-LAN helper calls; reliable iPhone TV remote control needs a native app or local companion.</p>
             </div>

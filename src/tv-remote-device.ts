@@ -73,6 +73,16 @@ export interface HelperRequestSpec {
 }
 
 
+export type RemoteStartWatchingMethod = 'built_in_tv_app' | 'streaming_stick_or_box' | 'game_console_or_other'
+
+export interface RemoteStartWatchingMethodChoice {
+  id: RemoteStartWatchingMethod
+  title: string
+  icon: string
+  helper: string
+  nextCopy: string
+}
+
 export interface RemoteStartOnboardingChoice {
   platform: LinkedTvPlatform
   title: string
@@ -81,6 +91,7 @@ export interface RemoteStartOnboardingChoice {
   setupPreview: string
   nextCopy: string
   recommended: boolean
+  watchingMethods: RemoteStartWatchingMethod[]
 }
 
 export const LINKED_TV_DEVICE_KEY = 'watch-sync.linkedTvDevice.v1'
@@ -202,6 +213,31 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
 }
 
 
+
+export const REMOTE_START_WATCHING_METHOD_CHOICES: RemoteStartWatchingMethodChoice[] = [
+  {
+    id: 'built_in_tv_app',
+    title: 'TV app built into my TV',
+    icon: 'TV',
+    helper: 'Netflix, Hulu, Disney+, Prime, Max, or YouTube opened from the TV home screen.',
+    nextCopy: 'Next, pick your TV brand so Watch Sync can show the right setup steps.',
+  },
+  {
+    id: 'streaming_stick_or_box',
+    title: 'Streaming stick or box',
+    icon: '▭',
+    helper: 'Roku, Fire TV, Chromecast / Google TV, Nvidia Shield, Onn, or Apple TV plugged into HDMI.',
+    nextCopy: 'Next, pick Roku, Fire TV, Chromecast / Google TV, Apple TV, or the closest match.',
+  },
+  {
+    id: 'game_console_or_other',
+    title: 'Game console / cable box / not sure',
+    icon: '?',
+    helper: 'Xbox, PlayStation, cable box, AirPlay/Cast session, or anything not listed.',
+    nextCopy: 'Manual countdown works tonight. Remote Start only appears when a safe local Play path exists.',
+  },
+]
+
 export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
   {
     platform: 'roku',
@@ -211,6 +247,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'Usually easiest: enter the Roku IP, save, then Test Play.',
     nextCopy: 'Pick Roku if your TV or streaming stick says Roku.',
     recommended: true,
+    watchingMethods: ['built_in_tv_app', 'streaming_stick_or_box'],
   },
   {
     platform: 'lg_webos',
@@ -220,6 +257,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'Pair on the TV prompt, save the local client key, then Test Play.',
     nextCopy: 'Pick this for LG webOS smart TVs.',
     recommended: true,
+    watchingMethods: ['built_in_tv_app'],
   },
   {
     platform: 'samsung',
@@ -229,6 +267,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'Approve the TV prompt/token if shown, then Test Play.',
     nextCopy: 'Pick this for Samsung/Tizen smart TVs.',
     recommended: true,
+    watchingMethods: ['built_in_tv_app'],
   },
   {
     platform: 'sony_bravia',
@@ -238,6 +277,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'Enable IP Control on supported Bravia models, then discover/test Play.',
     nextCopy: 'Pick this for Sony Bravia TVs with IP Control.',
     recommended: true,
+    watchingMethods: ['built_in_tv_app'],
   },
   {
     platform: 'android_adb',
@@ -247,6 +287,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'Guided setup beta: turn on debugging, connect ADB, then Test Play.',
     nextCopy: 'Pick this for Fire TV Stick/Cube, Chromecast with Google TV, Google TV Streamer, Onn, or Shield.',
     recommended: true,
+    watchingMethods: ['built_in_tv_app', 'streaming_stick_or_box'],
   },
   {
     platform: 'apple_tv_manual',
@@ -256,6 +297,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     setupPreview: 'No direct Remote Start claim yet. Use manual countdown tonight.',
     nextCopy: 'If your device is not listed, use manual countdown. It still works with any TV.',
     recommended: false,
+    watchingMethods: ['streaming_stick_or_box', 'game_console_or_other'],
   },
 ]
 

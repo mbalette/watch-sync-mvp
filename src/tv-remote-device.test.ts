@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   REMOTE_START_ONBOARDING_CHOICES,
+  REMOTE_START_WATCHING_METHOD_CHOICES,
   TV_PLATFORM_OPTIONS,
   buildDevicePauseRequest,
   buildDevicePlayRequest,
@@ -46,18 +47,26 @@ describe('linked TV device helper routing', () => {
 
 
 
-  it('offers a consumer onboarding picker before technical setup fields', () => {
-    expect(REMOTE_START_ONBOARDING_CHOICES.map((choice) => [choice.platform, choice.title, choice.recommended])).toEqual([
-      ['roku', 'Roku / Roku TV', true],
-      ['lg_webos', 'LG TV', true],
-      ['samsung', 'Samsung TV', true],
-      ['sony_bravia', 'Sony Bravia TV', true],
-      ['android_adb', 'Fire / Android / Google TV', true],
-      ['apple_tv_manual', 'Apple TV / not sure', false],
+  it('offers a click-through consumer onboarding path before technical setup fields', () => {
+    expect(REMOTE_START_WATCHING_METHOD_CHOICES.map((choice) => [choice.id, choice.title])).toEqual([
+      ['built_in_tv_app', 'TV app built into my TV'],
+      ['streaming_stick_or_box', 'Streaming stick or box'],
+      ['game_console_or_other', 'Game console / cable box / not sure'],
+    ])
+    expect(REMOTE_START_WATCHING_METHOD_CHOICES.find((choice) => choice.id === 'streaming_stick_or_box')?.nextCopy).toMatch(/Roku, Fire TV, Chromecast/i)
+
+    expect(REMOTE_START_ONBOARDING_CHOICES.map((choice) => [choice.platform, choice.title, choice.recommended, choice.watchingMethods])).toEqual([
+      ['roku', 'Roku / Roku TV', true, ['built_in_tv_app', 'streaming_stick_or_box']],
+      ['lg_webos', 'LG TV', true, ['built_in_tv_app']],
+      ['samsung', 'Samsung TV', true, ['built_in_tv_app']],
+      ['sony_bravia', 'Sony Bravia TV', true, ['built_in_tv_app']],
+      ['android_adb', 'Fire / Android / Google TV', true, ['built_in_tv_app', 'streaming_stick_or_box']],
+      ['apple_tv_manual', 'Apple TV / not sure', false, ['streaming_stick_or_box', 'game_console_or_other']],
     ])
     expect(REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === 'apple_tv_manual')?.nextCopy).toMatch(/manual countdown/i)
     expect(REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === 'android_adb')?.setupPreview).toMatch(/guided setup beta/i)
   })
+
 
   it('provides device-specific guided setup wizard steps and actions', () => {
     expect(getRemoteStartWizard('roku')).toMatchObject({

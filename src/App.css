@@ -1014,6 +1014,35 @@ button:active {
 }
 
 
+
+.remote-onboarding-flow.disabled-step,
+.remote-setup-wizard.empty-wizard {
+  opacity: 0.72;
+  border-style: dashed;
+  background: rgba(255, 248, 231, 0.035);
+}
+
+.method-choice-card .tv-choice-badge {
+  background: rgba(230, 179, 124, 0.22);
+  color: var(--gold);
+  border: 1px solid rgba(230, 179, 124, 0.24);
+}
+
+.empty-next-step {
+  padding: 13px 14px;
+  border-radius: 16px;
+  color: var(--text-soft);
+  background: rgba(0,0,0,0.18);
+  border: 1px solid rgba(255, 248, 231, 0.08);
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
+.empty-wizard h3 {
+  margin: 0;
+  color: var(--text);
+}
+
 .remote-setup-wizard {
   display: grid;
   gap: 11px;
