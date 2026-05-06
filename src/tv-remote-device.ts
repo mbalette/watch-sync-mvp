@@ -141,7 +141,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     manualFallbackRequired: true,
   },
   philips_jointspace: {
-    canTestConnection: true,
+    canTestConnection: false,
     canSendPlay: true,
     canSendPause: false,
     canAutoPlayAtGo: false,
@@ -153,7 +153,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     manualFallbackRequired: true,
   },
   vizio_smartcast: {
-    canTestConnection: true,
+    canTestConnection: false,
     canSendPlay: true,
     canSendPause: true,
     canAutoPlayAtGo: false,
@@ -165,7 +165,7 @@ const REMOTE_START_CAPABILITIES: Record<LinkedTvPlatform, RemoteStartCapability>
     manualFallbackRequired: true,
   },
   home_assistant_webhook: {
-    canTestConnection: true,
+    canTestConnection: false,
     canSendPlay: true,
     canSendPause: false,
     canAutoPlayAtGo: false,
@@ -218,7 +218,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     safeGoCommand: 'Play only',
     pausePolicy: 'Pause is not exposed as a safe automatic command. Pause manually at 00:00.',
     togglePolicy: 'No Play/Pause toggle at GO and no blind retries.',
-    primaryAction: 'Test Play',
+    primaryAction: 'Check Roku',
     publicCopy: 'Roku Remote Start beta sends one local Play command at GO. Manual countdown always works.',
   },
   lg_webos: {
@@ -235,7 +235,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     safeGoCommand: 'SSAP media.controls/play only',
     pausePolicy: 'Discrete Pause exists for test/setup; GO still sends Play only.',
     togglePolicy: 'No Play/Pause toggle at GO.',
-    primaryAction: 'Pair + Test Play',
+    primaryAction: 'Pair TV',
     publicCopy: 'LG webOS Remote Start beta uses local TV pairing. Hardware behavior is not verified yet.',
   },
   samsung: {
@@ -252,7 +252,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     safeGoCommand: 'KEY_PLAY only',
     pausePolicy: 'KEY_PAUSE is available for testing where it behaves discretely.',
     togglePolicy: 'Do not use KEY_PLAYPAUSE at GO.',
-    primaryAction: 'Pair + Test Play',
+    primaryAction: 'Pair TV',
     publicCopy: 'Samsung Remote Start beta is for supported TVs after local approval; not official universal support.',
   },
   android_adb: {
@@ -269,7 +269,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     safeGoCommand: 'KEYCODE_MEDIA_PLAY only',
     pausePolicy: 'KEYCODE_MEDIA_PAUSE is available for setup/testing; GO uses Play only.',
     togglePolicy: 'KEYCODE_MEDIA_PLAY_PAUSE / 85 is blocked for GO.',
-    primaryAction: 'Connect ADB + Test Play',
+    primaryAction: 'Connect ADB',
     publicCopy: 'Guided setup beta. Some devices may need reconnect. Manual countdown always works.',
   },
   sony_bravia: {
@@ -286,7 +286,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     safeGoCommand: 'Discovered Play IRCC code only',
     pausePolicy: 'Pause is not exposed as safe in the current panel.',
     togglePolicy: 'No toggle command at GO.',
-    primaryAction: 'Discover code + Test Play',
+    primaryAction: 'Discover Play code',
     publicCopy: 'Remote Start beta for supported Sony TVs only. Do not imply all Sony Google TVs work.',
   },
   philips_jointspace: {
@@ -421,6 +421,7 @@ export function canUseRemoteStartAtGo(deviceInput: LinkedTvDevice): boolean {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
   if (capability.publicClaimLevel !== 'primary-beta' && capability.publicClaimLevel !== 'guided-setup-beta') return false
+  if (!device.lastTestedAt) return false
   if (!device.useRemoteStartAtGo || !capability.canAutoPlayAtGo || !capability.safeGoCommand) return false
   if (buildDevicePlayRequest(device).unsafeReason) return false
   return true
@@ -471,6 +472,7 @@ export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperReque
 export function buildDevicePlayRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
+  if (capability.publicClaimLevel !== 'primary-beta' && capability.publicClaimLevel !== 'guided-setup-beta') return unsafe(`${device.label} is not a public Remote Start lane. Use manual countdown.`)
   if (!capability.canSendPlay) return unsafe(`${device.label} is manual-only. Watch Sync will not send remote commands.`)
   if (device.platform === 'home_assistant_webhook') return buildHomeAssistantWebhookRequest(device, false)
   if (device.platform === 'apple_tv_manual') return unsafe('Apple TV is manual-only. Watch Sync does not claim direct Apple TV remote control.')

@@ -198,6 +198,8 @@ function App() {
   const setupOpen = Boolean(room && (room.targetTimestamp === '00:00' || showSetupSheet))
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
+  const isPublicRemoteStartLane = tvCapability.publicClaimLevel === 'primary-beta' || tvCapability.publicClaimLevel === 'guided-setup-beta'
+  const hasRecentHelperCheck = Boolean(linkedTvDevice.lastTestedAt)
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
   const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
   const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
@@ -1336,25 +1338,38 @@ function App() {
                   <input value={linkedTvDevice.apiVersion ?? 6} onChange={(event) => updateLinkedDevice({ apiVersion: Number(event.target.value) || 6 })} inputMode="numeric" aria-label="Philips JointSpace API version" />
                 </label>
               )}
-              <label className="field-label compact checkbox-row">
+              <div className="setup-sequence" aria-label="Remote Start setup sequence">
+                <span><strong>1</strong> Save setup</span>
+                <span><strong>2</strong> Check connection</span>
+                <span><strong>3</strong> Enable GO Play</span>
+              </div>
+              <div className="remote-button-row triple primary-setup-actions">
+                <button type="button" onClick={() => saveLinkedDevice()}>1 Save setup</button>
+                {isPublicRemoteStartLane ? (
+                  <button type="button" onClick={testLinkedDevice} disabled={!tvCapability.canTestConnection}>2 {remoteStartWizard.primaryAction}</button>
+                ) : (
+                  <button type="button" disabled>Use manual countdown</button>
+                )}
+              </div>
+              {isPublicRemoteStartLane && hasRecentHelperCheck && tvCapability.canSendPlay && (
+                <div className="remote-button-row triple advanced-test-actions" aria-label="Optional Remote Start test commands">
+                  <button type="button" onClick={() => sendLinkedTvPlay('manual')}>Test Play now</button>
+                  {tvCapability.canSendPause && <button type="button" onClick={sendLinkedTvPause}>Test Pause</button>}
+                </div>
+              )}
+              <label className="field-label compact checkbox-row enable-go-row">
                 <input
                   type="checkbox"
-                  checked={linkedTvDevice.useRemoteStartAtGo}
-                  disabled={!tvCapability.canAutoPlayAtGo || !tvCapability.safeGoCommand}
+                  checked={linkedTvDevice.useRemoteStartAtGo && isPublicRemoteStartLane && hasRecentHelperCheck}
+                  disabled={!isPublicRemoteStartLane || !hasRecentHelperCheck || !tvCapability.canAutoPlayAtGo || !tvCapability.safeGoCommand}
                   onChange={(event) => updateLinkedDevice({ useRemoteStartAtGo: event.target.checked })}
                   aria-label="Use Remote Start at GO"
                 />
-                <span>Use Remote Start at GO</span>
+                <span>3 Enable Remote Start at GO</span>
               </label>
               <p className="mode-caveat">
-                Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : 'off or unavailable for unsupported/later/manual lanes — manual countdown remains active.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
+                Readiness: {remoteStartReadiness.label} — {remoteStartReadiness.reason} GO opt-in status: {remoteStartAtGoEnabled ? 'enabled — a single safe Play command can be sent at GO.' : hasRecentHelperCheck ? 'off or unavailable for unsupported/later/manual lanes — manual countdown remains active.' : 'test the connection first, then enable GO Play if this lane supports it.'} Public level: {tvCapability.publicClaimLevel}; hardware validated: {tvCapability.hardwareValidated ? 'yes' : 'not yet'}.
               </p>
-              <div className="remote-button-row triple">
-                <button type="button" onClick={() => saveLinkedDevice()}>Save local</button>
-                <button type="button" onClick={testLinkedDevice} disabled={!tvCapability.canTestConnection}>{tvCapability.requiresPairing ? 'Pair/Test' : 'Test connection'}</button>
-                {tvCapability.canSendPlay && <button type="button" onClick={() => sendLinkedTvPlay('manual')}>{linkedTvDevice.platform === 'home_assistant_webhook' ? 'Send GO webhook' : 'Send Play'}</button>}
-                {tvCapability.canSendPause && <button type="button" onClick={sendLinkedTvPause}>Send Pause</button>}
-              </div>
               <div className="extension-status">{tvRemoteStatus}</div>
               <div className="compatibility-mini" aria-label="TV Remote Mode compatibility">
                 {tvRemoteRoadmap.map((target) => (

@@ -47,7 +47,7 @@ describe('linked TV device helper routing', () => {
     expect(getRemoteStartWizard('roku')).toMatchObject({
       title: 'Roku / Roku TV setup',
       label: 'Remote Start beta / primary',
-      primaryAction: 'Test Play',
+      primaryAction: 'Check Roku',
       steps: expect.arrayContaining([
         expect.stringMatching(/same Wi-Fi/i),
         expect.stringMatching(/Control by mobile apps/i),
@@ -58,7 +58,7 @@ describe('linked TV device helper routing', () => {
     expect(getRemoteStartWizard('android_adb')).toMatchObject({
       title: 'Fire / Android / Google TV guided setup',
       label: 'Guided setup beta',
-      primaryAction: 'Connect ADB + Test Play',
+      primaryAction: 'Connect ADB',
       steps: expect.arrayContaining([
         expect.stringMatching(/Developer Options/i),
         expect.stringMatching(/pairing code/i),
@@ -82,7 +82,7 @@ describe('linked TV device helper routing', () => {
   it('requires pairing/code for LG and Sony GO commands and blocks Philips toggle GO', () => {
     expect(buildDevicePlayRequest(normalizeLinkedTvDevice({ platform: 'lg_webos', host: '192.168.1.4' })).unsafeReason).toMatch(/client key/)
     expect(buildDevicePlayRequest(normalizeLinkedTvDevice({ platform: 'sony_bravia', host: '192.168.1.5' })).unsafeReason).toMatch(/IRCC/)
-    expect(buildDevicePlayRequest(normalizeLinkedTvDevice({ platform: 'philips_jointspace', host: '192.168.1.6' })).unsafeReason).toMatch(/risky toggle/)
+    expect(buildDevicePlayRequest(normalizeLinkedTvDevice({ platform: 'philips_jointspace', host: '192.168.1.6' })).unsafeReason).toMatch(/not a public Remote Start lane|manual countdown/i)
     expect(getRemoteStartCapability('philips_jointspace')).toMatchObject({ canAutoPlayAtGo: false })
     expect(getRemoteStartCapability('philips_jointspace').safeGoCommand).toBeUndefined()
   })
@@ -99,14 +99,15 @@ describe('linked TV device helper routing', () => {
       manualFallbackRequired: true,
     })
     expect(buildDeviceTestRequest(apple).unsafeReason).toMatch(/manual-only/i)
-    expect(buildDevicePlayRequest(apple).unsafeReason).toMatch(/manual-only/i)
+    expect(buildDevicePlayRequest(apple).unsafeReason).toMatch(/manual countdown|not a public Remote Start lane/i)
     expect(buildDevicePauseRequest(apple).unsafeReason).toMatch(/manual-only/i)
     expect(canUseRemoteStartAtGo(apple)).toBe(false)
   })
 
   it('requires Remote Start GO opt-in and safe auto-play capability', () => {
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2' }))).toBe(false)
-    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', useRemoteStartAtGo: true }))).toBe(true)
+    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', useRemoteStartAtGo: true }))).toBe(false)
+    expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', lastTestedAt: '2026-05-06T00:00:00.000Z', useRemoteStartAtGo: true }))).toBe(true)
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'philips_jointspace', host: '192.168.1.6', useRemoteStartAtGo: true }))).toBe(false)
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'home_assistant_webhook', webhookUrl: 'http://ha.local/api/webhook/id', useRemoteStartAtGo: true }))).toBe(false)
     expect(canUseRemoteStartAtGo(normalizeLinkedTvDevice({ platform: 'vizio_smartcast', host: '192.168.1.8', authToken: 'tok', useRemoteStartAtGo: true }))).toBe(false)
@@ -166,28 +167,20 @@ describe('linked TV device helper routing', () => {
     })
   })
 
-  it('routes Home Assistant webhook test and play through the local helper without requiring a host', () => {
+  it('keeps Home Assistant helper routing out of the D2C Remote Start UI path', () => {
     const device = normalizeLinkedTvDevice({ platform: 'home_assistant_webhook', webhookUrl: ' http://ha.local:8123/api/webhook/random-id ' })
 
     expect(device.host).toBe('')
     expect(device.webhookUrl).toBe('http://ha.local:8123/api/webhook/random-id')
-    expect(buildDeviceTestRequest(device)).toEqual({
-      path: '/home-assistant/webhook',
-      method: 'POST',
-      body: { webhookUrl: 'http://ha.local:8123/api/webhook/random-id', test: true },
-    })
-    expect(buildDevicePlayRequest(device)).toEqual({
-      path: '/home-assistant/webhook',
-      method: 'POST',
-      body: { webhookUrl: 'http://ha.local:8123/api/webhook/random-id' },
-    })
+    expect(buildDeviceTestRequest(device).unsafeReason).toMatch(/manual countdown fallback|not currently/i)
+    expect(buildDevicePlayRequest(device).unsafeReason).toMatch(/manual countdown|not a public Remote Start lane/i)
   })
 
   it('blocks Home Assistant webhook routing with a local config error when the webhook URL is missing', () => {
     const request = buildDevicePlayRequest(normalizeLinkedTvDevice({ platform: 'home_assistant_webhook' }))
 
     expect(request).toMatchObject({ path: '', method: 'POST' })
-    expect(request.unsafeReason).toMatch(/Home Assistant webhook URL/i)
+    expect(request.unsafeReason).toMatch(/manual countdown|not a public Remote Start lane/i)
   })
 
   it('does not add Home Assistant token or entity fields to helper request bodies', () => {
@@ -196,9 +189,7 @@ describe('linked TV device helper routing', () => {
       webhookUrl: 'https://ha.example/api/webhook/secret-id',
     }))
 
-    expect(request.body).toEqual({ webhookUrl: 'https://ha.example/api/webhook/secret-id' })
-    expect(request.body).not.toHaveProperty('token')
-    expect(request.body).not.toHaveProperty('entityId')
-    expect(request.body).not.toHaveProperty('authToken')
+    expect(request.body).toBeUndefined()
+    expect(request.unsafeReason).toMatch(/manual countdown|not a public Remote Start lane/i)
   })
 })
