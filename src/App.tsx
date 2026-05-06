@@ -925,6 +925,46 @@ function App() {
         <span>{readyCount}/{Math.max(people.length, 2)} ready</span>
       </section>
 
+      <section className="early-remote-onboarding" aria-label="Remote Start quick setup">
+        <div className="onboarding-heading early-remote-heading">
+          <span className="wizard-kicker">Remote Start setup</span>
+          <h2>What are you using to watch?</h2>
+          <p>Choose the screen or device playing the title. Manual countdown stays as fallback for all choices; Remote Start only sends a local Play at GO when a safe path exists.</p>
+        </div>
+        <div className="setup-sequence early-setup-sequence" aria-label="Remote Start setup steps">
+          <span><strong>1</strong>Watch method</span>
+          <span><strong>2</strong>Device</span>
+          <span><strong>3</strong>Connect it</span>
+        </div>
+        <div className="early-method-row" aria-label="What are you using to watch choices">
+          {REMOTE_START_WATCHING_METHOD_CHOICES.map((choice) => {
+            const active = remoteWatchingMethod === choice.id
+            return (
+              <button
+                key={choice.id}
+                type="button"
+                className={`early-method-choice ${active ? 'active' : ''}`}
+                aria-pressed={active}
+                onClick={() => {
+                  setRemoteWatchingMethod(choice.id)
+                  setHasChosenRemotePlatform(false)
+                  setShowRemoteSetupDetails(false)
+                  openTvRemoteDrawer(true)
+                }}
+              >
+                <span aria-hidden="true">{choice.icon}</span>
+                <strong>{choice.id === 'game_console_or_other' ? 'Console / cable / not sure' : choice.title}</strong>
+              </button>
+            )
+          })}
+        </div>
+        {!hasChosenRemotePlatform && (
+          <p className="early-no-device">No TV or streaming device is selected yet — choose a watch method first.</p>
+        )}
+        <button className="early-remote-open" type="button" onClick={() => openTvRemoteDrawer(true)}>
+          {remoteWatchingMethod ? 'Continue to device setup' : 'Start guided setup'}
+        </button>
+      </section>
 
       <section className="countdown-hero" aria-live="polite" aria-label="Countdown">
         <div className="hero-copy">
@@ -1017,8 +1057,8 @@ function App() {
             Find watch
           </button>
           <button className="secondary-action remote-start-shortcut" type="button" onClick={() => openTvRemoteDrawer(!showTvRemoteDrawer)} aria-expanded={showTvRemoteDrawer}>
-            <span>What are you using to watch?</span>
-            <small>Remote Start setup</small>
+            <span>Remote Start setup</span>
+            <small>{remoteWatchingMethod ? 'Continue device setup' : 'Pick watch method first'}</small>
           </button>
         </div>
 

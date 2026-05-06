@@ -276,6 +276,97 @@
   line-height: 1.42;
 }
 
+.early-remote-onboarding {
+  display: grid;
+  gap: 10px;
+  padding: 13px 14px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(230, 179, 124, 0.18), transparent 36%),
+    linear-gradient(180deg, rgba(255, 248, 231, 0.075), rgba(255, 248, 231, 0.035));
+  border: 1px solid rgba(230, 179, 124, 0.20);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.07), 0 18px 55px rgba(0,0,0,0.16);
+}
+
+.early-remote-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+}
+
+.early-setup-sequence span {
+  min-height: 42px;
+}
+
+.early-remote-heading p {
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.early-method-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.early-method-choice {
+  min-width: 0;
+  min-height: 70px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 9px 6px;
+  border-radius: 18px;
+  color: var(--text-soft);
+  background: rgba(0, 0, 0, 0.16);
+  border: 1px solid rgba(255, 248, 231, 0.09);
+  text-align: center;
+}
+
+.early-method-choice span {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 10px;
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.early-method-choice strong {
+  color: var(--text);
+  font-size: 0.75rem;
+  line-height: 1.15;
+}
+
+.early-method-choice.active {
+  color: var(--text);
+  border-color: rgba(230, 179, 124, 0.60);
+  background: linear-gradient(145deg, rgba(230, 179, 124, 0.20), rgba(255, 248, 231, 0.065));
+}
+
+.early-no-device {
+  margin: -2px 0 0;
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
+.early-remote-open {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 17px;
+  color: #241413;
+  background: linear-gradient(145deg, var(--cream), var(--gold));
+  border-color: transparent;
+}
+
 .time-input-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  LINKED_TV_DEVICE_KEY,
   REMOTE_START_ONBOARDING_CHOICES,
   REMOTE_START_WATCHING_METHOD_CHOICES,
   TV_PLATFORM_OPTIONS,
@@ -11,10 +12,32 @@ import {
   getRemoteStartReadiness,
   getRemoteStartWizard,
   isAllowedLocalHelperUrl,
+  loadLinkedTvDevice,
   normalizeLinkedTvDevice,
 } from './tv-remote-device'
 
 describe('linked TV device helper routing', () => {
+  function makeMemoryStorage(): Storage {
+    const values = new Map<string, string>()
+    return {
+      get length() {
+        return values.size
+      },
+      clear: () => values.clear(),
+      getItem: (key: string) => values.get(key) ?? null,
+      key: (index: number) => Array.from(values.keys())[index] ?? null,
+      removeItem: (key: string) => { values.delete(key) },
+      setItem: (key: string, value: string) => { values.set(key, value) },
+    }
+  }
+
+  it('starts fresh Remote Start storage with no linked/default device', () => {
+    const storage = makeMemoryStorage()
+
+    expect(loadLinkedTvDevice(storage)).toBeNull()
+    expect(storage.getItem(LINKED_TV_DEVICE_KEY)).toBeNull()
+  })
+
   it('normalizes Remote Start opt-in to false and always keeps manual fallback required', () => {
     const device = normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2' })
 
