@@ -25,6 +25,7 @@ import {
   canUseRemoteStartAtGo,
   getRemoteStartCapability,
   getRemoteStartReadiness,
+  getRemoteStartWizard,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -198,6 +199,7 @@ function App() {
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
   const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
   const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
+  const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
   const selectedTvPlatformOption = TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform)
   const tvRemoteRoadmap = [
     { label: 'Roku / Roku TV', status: 'Remote Start beta / primary', note: 'Local ECP Play at GO; some Roku OS builds require Control by mobile apps/network access.' },
@@ -1197,6 +1199,42 @@ function App() {
                   Home Assistant webhook is not a D2C default path. It is only for users already running HA locally and stays outside public Remote Start support. Watch Sync servers do not store HA credentials, tokens, entity IDs, or webhook URLs. Manual countdown remains the fallback.
                 </p>
               )}
+              <section className="remote-setup-wizard" aria-label={`${remoteStartWizard.title} wizard`}>
+                <div className="wizard-heading-row">
+                  <div>
+                    <span className="wizard-kicker">Setup wizard</span>
+                    <h3>{remoteStartWizard.title}</h3>
+                  </div>
+                  <span className={`wizard-status ${remoteStartWizard.label === 'Manual-only' ? 'manual' : remoteStartWizard.label === 'Guided setup beta' ? 'guided' : remoteStartWizard.label === 'Not supported yet' ? 'unsupported' : 'beta'}`}>{remoteStartWizard.label}</span>
+                </div>
+                <p>{remoteStartWizard.summary}</p>
+                <ol className="wizard-steps">
+                  {remoteStartWizard.steps.map((step) => <li key={step}>{step}</li>)}
+                </ol>
+                <dl className="wizard-facts">
+                  <div>
+                    <dt>TV setting</dt>
+                    <dd>{remoteStartWizard.tvSideSetting}</dd>
+                  </div>
+                  <div>
+                    <dt>Reconnect expectation</dt>
+                    <dd>{remoteStartWizard.pairingPersistence}</dd>
+                  </div>
+                  <div>
+                    <dt>GO command</dt>
+                    <dd>{remoteStartWizard.safeGoCommand}</dd>
+                  </div>
+                  <div>
+                    <dt>Pause / toggle policy</dt>
+                    <dd>{remoteStartWizard.pausePolicy} {remoteStartWizard.togglePolicy}</dd>
+                  </div>
+                </dl>
+                <div className="wizard-action-row">
+                  <strong>Next action:</strong>
+                  <span>{remoteStartWizard.primaryAction}</span>
+                </div>
+                <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
+              </section>
               <label className="field-label compact">
                 <span>Platform</span>
                 <select

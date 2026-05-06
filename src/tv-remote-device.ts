@@ -19,6 +19,21 @@ export interface RemoteStartReadinessResult {
   reason: string
 }
 
+
+export interface RemoteStartWizardSpec {
+  title: string
+  label: PlatformStatusLabel
+  summary: string
+  steps: string[]
+  tvSideSetting: string
+  pairingPersistence: string
+  safeGoCommand: string
+  pausePolicy: string
+  togglePolicy: string
+  primaryAction: string
+  publicCopy: string
+}
+
 export interface RemoteStartCapability {
   canTestConnection: boolean
   canSendPlay: boolean
@@ -188,6 +203,151 @@ export const TV_PLATFORM_OPTIONS: Array<{ id: LinkedTvPlatform; label: string; s
   { id: 'home_assistant_webhook', label: 'Home Assistant local bridge', status: 'Not supported yet' },
   { id: 'apple_tv_manual', label: 'Apple TV', status: 'Manual-only' },
 ]
+
+
+const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
+  roku: {
+    title: 'Roku / Roku TV setup',
+    label: 'Remote Start beta / primary',
+    summary: 'Best first Remote Start lane: local Roku ECP Play at GO after the user opens and pauses the title.',
+    steps: [
+      'Keep this device and your Watch Sync helper on the same Wi-Fi/LAN.',
+      'If keypresses fail, enable Roku Control by mobile apps / Network access in TV settings.',
+      'Enter the Roku IP or hostname, save locally, then Test Play before movie night.',
+    ],
+    tvSideSetting: 'May require Control by mobile apps / Network access on newer Roku OS builds.',
+    pairingPersistence: 'No token pairing. Reliability depends on LAN access, device reachability, and IP/discovery.',
+    safeGoCommand: 'Play only',
+    pausePolicy: 'Pause is not exposed as a safe automatic command. Pause manually at 00:00.',
+    togglePolicy: 'No Play/Pause toggle at GO and no blind retries.',
+    primaryAction: 'Test Play',
+    publicCopy: 'Roku Remote Start beta sends one local Play command at GO. Manual countdown always works.',
+  },
+  lg_webos: {
+    title: 'LG webOS setup',
+    label: 'Remote Start beta / primary',
+    summary: 'Pair with the TV prompt, save the LG client key locally, then test discrete Play/Pause.',
+    steps: [
+      'Enter the LG TV IP or hostname and keep the helper on the same LAN.',
+      'Run Pair/Test and accept the pairing prompt on the TV.',
+      'Save the client key locally, then Test Play/Pause before movie night.',
+    ],
+    tvSideSetting: 'LG Connect Apps / TV prompt pairing may be required.',
+    pairingPersistence: 'Client key is expected to persist but must be hardware-validated after sleep/reboot/helper restart.',
+    safeGoCommand: 'SSAP media.controls/play only',
+    pausePolicy: 'Discrete Pause exists for test/setup; GO still sends Play only.',
+    togglePolicy: 'No Play/Pause toggle at GO.',
+    primaryAction: 'Pair + Test Play',
+    publicCopy: 'LG webOS Remote Start beta uses local TV pairing. Hardware behavior is not verified yet.',
+  },
+  samsung: {
+    title: 'Samsung Tizen setup',
+    label: 'Remote Start beta',
+    summary: 'Beta local-key path after Samsung TV approval/token when required; model variance expected.',
+    steps: [
+      'Enter the Samsung TV IP or hostname and optional protocol URL/token if already known.',
+      'Run Pair/Test and approve the TV prompt if shown.',
+      'Save the token locally, then Test Play/Pause on a paused video.',
+    ],
+    tvSideSetting: 'TV approval prompt/token may be required; ports and behavior vary by model/firmware.',
+    pairingPersistence: 'Token persistence is model-dependent and hardware-unverified.',
+    safeGoCommand: 'KEY_PLAY only',
+    pausePolicy: 'KEY_PAUSE is available for testing where it behaves discretely.',
+    togglePolicy: 'Do not use KEY_PLAYPAUSE at GO.',
+    primaryAction: 'Pair + Test Play',
+    publicCopy: 'Samsung Remote Start beta is for supported TVs after local approval; not official universal support.',
+  },
+  android_adb: {
+    title: 'Fire / Android / Google TV guided setup',
+    label: 'Guided setup beta',
+    summary: 'Guided ADB beta for Fire OS, Android TV, Google TV, Nvidia Shield, Onn, Chromecast with Google TV, and Google TV Streamer. Fire TV Vega is not supported yet.',
+    steps: [
+      'Open Developer Options / debugging on the TV or streamer.',
+      'Enter the device IP/port or wireless debugging pairing code flow, then approve the prompt.',
+      'Run Connect ADB + Test Play. Some devices may need reconnect before movie night.',
+    ],
+    tvSideSetting: 'Developer Options, ADB/wireless debugging, and an approval prompt are required.',
+    pairingPersistence: 'May persist with stable ADB keys, but sleep/reboot/network changes remain hardware-unverified.',
+    safeGoCommand: 'KEYCODE_MEDIA_PLAY only',
+    pausePolicy: 'KEYCODE_MEDIA_PAUSE is available for setup/testing; GO uses Play only.',
+    togglePolicy: 'KEYCODE_MEDIA_PLAY_PAUSE / 85 is blocked for GO.',
+    primaryAction: 'Connect ADB + Test Play',
+    publicCopy: 'Guided setup beta. Some devices may need reconnect. Manual countdown always works.',
+  },
+  sony_bravia: {
+    title: 'Sony Bravia setup',
+    label: 'Remote Start beta for supported Sony TVs',
+    summary: 'Supported Bravia/IP Control models can use local IRCC Play after IP Control and Play-code discovery.',
+    steps: [
+      'Enable IP Control on the supported Sony Bravia TV and configure PSK/PIN if needed.',
+      'Enter the TV IP/hostname and run remote-controller-info to discover the Play IRCC code.',
+      'Save the Play IRCC code locally, then Test Play before movie night.',
+    ],
+    tvSideSetting: 'IP Control must be enabled and supported by the model; PSK/PIN may be required.',
+    pairingPersistence: 'Expected to persist while IP Control/PSK remain stable, but hardware validation is required.',
+    safeGoCommand: 'Discovered Play IRCC code only',
+    pausePolicy: 'Pause is not exposed as safe in the current panel.',
+    togglePolicy: 'No toggle command at GO.',
+    primaryAction: 'Discover code + Test Play',
+    publicCopy: 'Remote Start beta for supported Sony TVs only. Do not imply all Sony Google TVs work.',
+  },
+  philips_jointspace: {
+    title: 'Philips JointSpace later beta',
+    label: 'Later beta',
+    summary: 'Later/experimental only because common paths expose PlayPause toggle risk.',
+    steps: ['Use manual countdown tonight.', 'Only revisit this adapter after primary lanes are validated.', 'Do not enable automatic GO unless a discrete Play path is proven.'],
+    tvSideSetting: 'Model/API-generation settings vary.',
+    pairingPersistence: 'Unknown.',
+    safeGoCommand: 'None for automatic GO',
+    pausePolicy: 'Toggle-risk pause/play is not safe for automatic setup.',
+    togglePolicy: 'PlayPause toggle is not allowed for GO.',
+    primaryAction: 'Use manual countdown',
+    publicCopy: 'Later beta only; manual countdown remains the public path.',
+  },
+  vizio_smartcast: {
+    title: 'Vizio SmartCast later beta',
+    label: 'Later beta',
+    summary: 'Deferred because protocol confidence and model reliability are lower than primary lanes.',
+    steps: ['Use manual countdown tonight.', 'Do not headline Vizio support.', 'Revisit after primary adapter hardware validation.'],
+    tvSideSetting: 'PIN/token pairing may be required if later pursued.',
+    pairingPersistence: 'Unknown.',
+    safeGoCommand: 'None for current public lane',
+    pausePolicy: 'Not public; validate later.',
+    togglePolicy: 'No automatic GO until discrete command behavior is proven.',
+    primaryAction: 'Use manual countdown',
+    publicCopy: 'Later beta; not public headline support.',
+  },
+  home_assistant_webhook: {
+    title: 'Home Assistant bridge',
+    label: 'Not supported yet',
+    summary: 'Not a D2C default. Only use if a user already has local Home Assistant automation.',
+    steps: ['Use manual countdown unless you already run HA locally.', 'Keep webhook URLs local/private.', 'Do not present HA/Broadlink/CEC as default consumer setup.'],
+    tvSideSetting: 'External bridge setup outside Watch Sync.',
+    pairingPersistence: 'Depends on the user bridge.',
+    safeGoCommand: 'User-owned automation only',
+    pausePolicy: 'Depends on bridge; not public support.',
+    togglePolicy: 'User automation must avoid toggle-risk GO.',
+    primaryAction: 'Use manual countdown',
+    publicCopy: 'Not a default consumer path.',
+  },
+  apple_tv_manual: {
+    title: 'Apple TV',
+    label: 'Manual-only',
+    summary: 'Manual-only by default. No public App-Store-safe direct-control path is proven.',
+    steps: ['Open the title on Apple TV yourself.', 'Pause at 00:00.', 'Use the Watch Sync countdown and press Play manually at GO.'],
+    tvSideSetting: 'None for Watch Sync public control.',
+    pairingPersistence: 'No public Watch Sync pairing. Reverse-engineered pairing is not headline support.',
+    safeGoCommand: 'None',
+    pausePolicy: 'Manual pause only.',
+    togglePolicy: 'No private Apple APIs and no reverse-engineered public headline claim.',
+    primaryAction: 'Use manual countdown',
+    publicCopy: 'Apple TV stays manual-only unless an explicit internal beta is accepted later.',
+  },
+}
+
+export function getRemoteStartWizard(platform: LinkedTvPlatform): RemoteStartWizardSpec {
+  return REMOTE_START_WIZARDS[platform]
+}
 
 export function getRemoteStartCapability(platform: LinkedTvPlatform): RemoteStartCapability {
   return REMOTE_START_CAPABILITIES[platform]

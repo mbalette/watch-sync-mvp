@@ -7,6 +7,7 @@ import {
   canUseRemoteStartAtGo,
   getRemoteStartCapability,
   getRemoteStartReadiness,
+  getRemoteStartWizard,
   normalizeLinkedTvDevice,
 } from './tv-remote-device'
 
@@ -38,6 +39,38 @@ describe('linked TV device helper routing', () => {
       ['home_assistant_webhook', 'Not supported yet'],
       ['apple_tv_manual', 'Manual-only'],
     ])
+  })
+
+
+  it('provides device-specific guided setup wizard steps and actions', () => {
+    expect(getRemoteStartWizard('roku')).toMatchObject({
+      title: 'Roku / Roku TV setup',
+      label: 'Remote Start beta / primary',
+      primaryAction: 'Test Play',
+      steps: expect.arrayContaining([
+        expect.stringMatching(/same Wi-Fi/i),
+        expect.stringMatching(/Control by mobile apps/i),
+        expect.stringMatching(/Test Play/i),
+      ]),
+      safeGoCommand: 'Play only',
+    })
+    expect(getRemoteStartWizard('android_adb')).toMatchObject({
+      title: 'Fire / Android / Google TV guided setup',
+      label: 'Guided setup beta',
+      primaryAction: 'Connect ADB + Test Play',
+      steps: expect.arrayContaining([
+        expect.stringMatching(/Developer Options/i),
+        expect.stringMatching(/pairing code/i),
+        expect.stringMatching(/Some devices may need reconnect/i),
+      ]),
+      safeGoCommand: 'KEYCODE_MEDIA_PLAY only',
+    })
+    expect(getRemoteStartWizard('apple_tv_manual')).toMatchObject({
+      title: 'Apple TV',
+      label: 'Manual-only',
+      primaryAction: 'Use manual countdown',
+      safeGoCommand: 'None',
+    })
   })
 
   it('builds Roku and Samsung GO play requests', () => {
