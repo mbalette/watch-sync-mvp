@@ -19,7 +19,8 @@
     "lan:help": "tsx scripts/lan-help.ts",
     "package:extension": "tsx scripts/package-extension.ts",
     "typecheck": "tsc --noEmit",
-    "test:remote-start-beta": "vitest run src/tv-remote-device.test.ts"
+    "test:remote-start-beta": "vitest run src/tv-remote-device.test.ts",
+    "test:remote-start-runtime-beta": "vitest run src/tv-remote-device.test.ts"
   },
   "dependencies": {
     "@types/ws": "^8.18.1",
