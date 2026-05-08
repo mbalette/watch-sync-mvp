@@ -43,6 +43,12 @@ const FORBIDDEN_KEYS = new Set([
   "url",
   "token",
   "authToken",
+  "password",
+  "psk",
+  "sonyPsk",
+  "samsungToken",
+  "lgClientKey",
+  "vizioToken",
 ]);
 
 export function sanitizeRemoteStartOutcome(

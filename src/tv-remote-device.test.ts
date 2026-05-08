@@ -20,6 +20,7 @@ import { sanitizeRemoteStartOutcome } from "./remote-start-outcome-log";
 import {
   DEFAULT_REMOTE_START_RUNTIME_CONFIG,
   isRemoteStartInternalBetaUnlocked,
+  applyQaRemoteStartBetaPlatform,
   normalizeRemoteStartRuntimeConfig,
 } from "./remote-start-runtime-config";
 
@@ -74,10 +75,9 @@ describe("linked TV device helper routing", () => {
       ["roku", "Remote Start beta / primary"],
       ["lg_webos", "Remote Start beta / primary"],
       ["samsung", "Remote Start beta"],
-      ["android_adb", "Guided setup beta"],
       ["sony_bravia", "Remote Start beta for supported Sony TVs"],
       ["philips_jointspace", "Later beta"],
-      ["vizio_smartcast", "Later beta"],
+      ["vizio_smartcast", "Remote Start beta"],
       ["home_assistant_webhook", "Not supported yet"],
       ["apple_tv_manual", "Manual-only"],
     ]);
@@ -114,15 +114,10 @@ describe("linked TV device helper routing", () => {
         true,
         ["built_in_tv_app", "streaming_stick_or_box"],
       ],
+      ["vizio_smartcast", "VIZIO TV", true, ["built_in_tv_app"]],
       ["lg_webos", "LG TV", true, ["built_in_tv_app"]],
       ["samsung", "Samsung TV", true, ["built_in_tv_app"]],
       ["sony_bravia", "Sony Bravia TV", true, ["built_in_tv_app"]],
-      [
-        "android_adb",
-        "Fire / Android / Google TV",
-        true,
-        ["built_in_tv_app", "streaming_stick_or_box"],
-      ],
       [
         "apple_tv_manual",
         "Apple TV / not sure",
@@ -135,11 +130,6 @@ describe("linked TV device helper routing", () => {
         (choice) => choice.platform === "apple_tv_manual",
       )?.nextCopy,
     ).toMatch(/manual countdown/i);
-    expect(
-      REMOTE_START_ONBOARDING_CHOICES.find(
-        (choice) => choice.platform === "android_adb",
-      )?.setupPreview,
-    ).toMatch(/guided setup beta/i);
   });
 
   it("provides device-specific guided setup wizard steps and actions", () => {
@@ -336,7 +326,7 @@ describe("linked TV device helper routing", () => {
         }),
       ),
     ).toEqual({
-      path: "/lg-webos/pair",
+      path: "/lg/pair/start",
       method: "POST",
       body: { host: "tv.local", url: "ws://tv.local:3000" },
     });
@@ -349,7 +339,7 @@ describe("linked TV device helper routing", () => {
         }),
       ),
     ).toEqual({
-      path: "/sony/remote-controller-info",
+      path: "/sony/connect",
       method: "POST",
       body: { host: "sony.local", psk: "1234" },
     });
@@ -365,7 +355,7 @@ describe("linked TV device helper routing", () => {
         }),
       ),
     ).toEqual({
-      path: "/lg-webos/media",
+      path: "/lg/keypress",
       method: "POST",
       body: { host: "192.168.1.4", clientKey: "lg-key", command: "pause" },
     });
@@ -393,36 +383,20 @@ describe("linked TV device helper routing", () => {
     ).toMatch(/toggle-risk/i);
   });
 
-  it("routes Android/Fire/Google TV ADB helper through discrete Play and Pause only", () => {
-    const device = normalizeLinkedTvDevice({
-      platform: "android_adb",
-      host: "192.168.1.50:5555",
-      useRemoteStartAtGo: true,
+  it("keeps Android/Fire/Google TV out of runtime beta picker", () => {
+    const config = normalizeRemoteStartRuntimeConfig({
+      ...DEFAULT_REMOTE_START_RUNTIME_CONFIG,
+      remoteStartRuntimeBetaAudience: "internal",
+      rokuRuntimeBetaEnabled: true,
     });
 
-    expect(getRemoteStartCapability("android_adb")).toMatchObject({
-      requiresLocalHelper: true,
-      requiresAdvancedSetup: true,
-      publicClaimLevel: "guided-setup-beta",
-      safeGoCommand: "KEYCODE_MEDIA_PLAY",
-    });
-    expect(buildDeviceTestRequest(device)).toEqual({
-      path: "/adb/connect",
-      method: "POST",
-      body: { host: "192.168.1.50:5555" },
-    });
-    expect(buildDevicePlayRequest(device)).toEqual({
-      path: "/adb/media-key",
-      method: "POST",
-      body: { host: "192.168.1.50:5555", key: "KEYCODE_MEDIA_PLAY" },
-    });
-    expect(buildDevicePauseRequest(device)).toEqual({
-      path: "/adb/media-key",
-      method: "POST",
-      body: { host: "192.168.1.50:5555", key: "KEYCODE_MEDIA_PAUSE" },
-    });
-    expect(JSON.stringify(buildDevicePlayRequest(device))).not.toContain(
-      "KEYCODE_MEDIA_PLAY_PAUSE",
+    expect(
+      getVisibleRemoteStartChoices("streaming_stick_or_box", config, true).map(
+        (choice) => choice.platform,
+      ),
+    ).toEqual(["roku", "apple_tv_manual"]);
+    expect(TV_PLATFORM_OPTIONS.map((option) => option.id)).not.toContain(
+      "android_adb",
     );
   });
 
@@ -588,5 +562,178 @@ describe("linked TV device helper routing", () => {
     expect(JSON.stringify(event)).not.toContain("192.168.1.2");
     expect(JSON.stringify(event)).not.toContain("SERIAL");
     expect(JSON.stringify(event)).not.toContain("secret");
+  });
+
+  it("keeps all non-Roku runtime beta platforms off by default but QA exposes one at a time", () => {
+    const internalRoku = normalizeRemoteStartRuntimeConfig({
+      ...DEFAULT_REMOTE_START_RUNTIME_CONFIG,
+      rokuRuntimeBetaEnabled: true,
+      vizioRuntimeBetaEnabled: false,
+      lgRuntimeBetaEnabled: false,
+      samsungRuntimeBetaEnabled: false,
+      sonyRuntimeBetaEnabled: false,
+    });
+
+    expect(
+      getVisibleRemoteStartChoices("built_in_tv_app", internalRoku, true).map(
+        (choice) => choice.platform,
+      ),
+    ).toEqual(["roku"]);
+
+    const storage = makeMemoryStorage();
+    const vizioQa = applyQaRemoteStartBetaPlatform(
+      internalRoku,
+      "?remoteStartBeta=internal&qaBetaPlatform=vizio",
+    );
+    isRemoteStartInternalBetaUnlocked("?remoteStartBeta=internal", storage);
+    expect(
+      getVisibleRemoteStartChoices("built_in_tv_app", vizioQa, true).map(
+        (choice) => choice.platform,
+      ),
+    ).toEqual(["vizio_smartcast"]);
+
+    for (const [qa, platform] of [
+      ["lg", "lg_webos"],
+      ["sony", "sony_bravia"],
+      ["samsung", "samsung"],
+    ] as const) {
+      const qaConfig = applyQaRemoteStartBetaPlatform(
+        internalRoku,
+        `?remoteStartBeta=internal&qaBetaPlatform=${qa}`,
+      );
+      expect(
+        getVisibleRemoteStartChoices("built_in_tv_app", qaConfig, true).map(
+          (choice) => choice.platform,
+        ),
+      ).toEqual([platform]);
+    }
+  });
+
+  it("builds all-platform beta Test Play and GO command specs without unsupported public rows", () => {
+    const config = normalizeRemoteStartRuntimeConfig({
+      ...DEFAULT_REMOTE_START_RUNTIME_CONFIG,
+      remoteStartRuntimeBetaAudience: "internal",
+      rokuRuntimeBetaEnabled: true,
+      vizioRuntimeBetaEnabled: true,
+      lgRuntimeBetaEnabled: true,
+      samsungRuntimeBetaEnabled: true,
+      sonyRuntimeBetaEnabled: true,
+    });
+
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({ platform: "roku", host: "192.168.1.2" }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/roku/keypress",
+      method: "POST",
+      body: { host: "192.168.1.2", key: "Play" },
+    });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({
+          platform: "vizio_smartcast",
+          host: "192.168.1.3",
+          authToken: "tok",
+        }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/vizio/keypress",
+      method: "POST",
+      body: { host: "192.168.1.3", authToken: "tok", key: "play" },
+    });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({
+          platform: "lg_webos",
+          host: "192.168.1.4",
+          clientKey: "lg-key",
+        }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/lg/pair/start",
+      method: "POST",
+      body: { host: "192.168.1.4", clientKey: "lg-key" },
+    });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({
+          platform: "samsung",
+          host: "192.168.1.5",
+          token: "sam-token",
+        }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/samsung/pair/start",
+      method: "POST",
+      body: { host: "192.168.1.5", token: "sam-token" },
+    });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({
+          platform: "sony_bravia",
+          host: "192.168.1.6",
+          psk: "psk",
+        }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/sony/connect",
+      method: "POST",
+      body: { host: "192.168.1.6", psk: "psk" },
+    });
+
+    expect(
+      buildDevicePlayRequest(
+        normalizeLinkedTvDevice({
+          platform: "vizio_smartcast",
+          host: "192.168.1.3",
+          authToken: "tok",
+        }),
+        config,
+        true,
+      ),
+    ).toEqual({
+      path: "/vizio/keypress",
+      method: "POST",
+      body: { host: "192.168.1.3", authToken: "tok", key: "play" },
+    });
+    expect(
+      getVisibleRemoteStartChoices("streaming_stick_or_box", config, true).map(
+        (choice) => choice.platform,
+      ),
+    ).toEqual(["roku", "apple_tv_manual"]);
+  });
+
+  it("redacts platform-specific secret fields from outcome events", () => {
+    const event = sanitizeRemoteStartOutcome({
+      type: "go_attempted",
+      platform: "vizio_smartcast",
+      deviceModel: "VIZIO MQX",
+      vizioToken: "vizio-secret",
+      lgClientKey: "lg-secret",
+      samsungToken: "samsung-secret",
+      sonyPsk: "sony-secret",
+      psk: "psk-secret",
+      password: "password-secret",
+      authToken: "auth-secret",
+      host: "192.168.1.10",
+    });
+
+    expect(event).toMatchObject({
+      type: "go_attempted",
+      platform: "vizio_smartcast",
+      deviceModel: "VIZIO MQX",
+    });
+    expect(JSON.stringify(event)).not.toMatch(/secret|192\.168/);
   });
 });

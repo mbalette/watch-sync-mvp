@@ -214,15 +214,15 @@ const REMOTE_START_CAPABILITIES: Record<
     manualFallbackRequired: true,
   },
   vizio_smartcast: {
-    canTestConnection: false,
+    canTestConnection: true,
     canSendPlay: true,
-    canSendPause: true,
-    canAutoPlayAtGo: false,
+    canSendPause: false,
+    canAutoPlayAtGo: true,
     requiresLocalHelper: true,
     requiresPairing: true,
     requiresAdvancedSetup: false,
     hardwareValidated: false,
-    publicClaimLevel: "later-beta",
+    publicClaimLevel: "primary-beta",
     manualFallbackRequired: true,
   },
   home_assistant_webhook: {
@@ -294,6 +294,17 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     watchingMethods: ["built_in_tv_app", "streaming_stick_or_box"],
   },
   {
+    platform: "vizio_smartcast",
+    title: "VIZIO TV",
+    badge: "Remote Start beta",
+    icon: "V",
+    setupPreview:
+      "Pair with the TV code, save the auth token locally, then Test Play.",
+    nextCopy: "Pick this for VIZIO TVs using the built-in TV streaming app.",
+    recommended: true,
+    watchingMethods: ["built_in_tv_app"],
+  },
+  {
     platform: "lg_webos",
     title: "LG TV",
     badge: "Remote Start beta / primary",
@@ -324,18 +335,6 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     nextCopy: "Pick this for Sony Bravia TVs with IP Control.",
     recommended: true,
     watchingMethods: ["built_in_tv_app"],
-  },
-  {
-    platform: "android_adb",
-    title: "Fire / Android / Google TV",
-    badge: "Guided setup beta",
-    icon: "TV",
-    setupPreview:
-      "Guided setup beta: turn on debugging, connect ADB, then Test Play.",
-    nextCopy:
-      "Pick this for Fire TV Stick/Cube, Chromecast with Google TV, Google TV Streamer, Onn, or Shield.",
-    recommended: true,
-    watchingMethods: ["built_in_tv_app", "streaming_stick_or_box"],
   },
   {
     platform: "apple_tv_manual",
@@ -377,13 +376,6 @@ export const TV_PLATFORM_OPTIONS: Array<{
     requiresSecret: true,
   },
   {
-    id: "android_adb",
-    label: "Fire TV / Android TV / Google TV",
-    displayLabel: "Fire/Android/Google TV",
-    helperLabel: "ADB helper",
-    status: "Guided setup beta",
-  },
-  {
     id: "sony_bravia",
     label: "Sony / Bravia",
     status: "Remote Start beta for supported Sony TVs",
@@ -396,8 +388,8 @@ export const TV_PLATFORM_OPTIONS: Array<{
   },
   {
     id: "vizio_smartcast",
-    label: "Vizio SmartCast",
-    status: "Later beta",
+    label: "VIZIO TV",
+    status: "Remote Start beta",
     requiresSecret: true,
   },
   {
@@ -536,22 +528,26 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     publicCopy: "Later beta only; manual countdown remains the public path.",
   },
   vizio_smartcast: {
-    title: "Vizio SmartCast later beta",
-    label: "Later beta",
+    title: "VIZIO Remote Start Beta",
+    label: "Remote Start beta",
     summary:
-      "Deferred because protocol confidence and model reliability are lower than primary lanes.",
+      "Watch Sync will pair with your VIZIO TV and test one Play command. Remote Start is only enabled if the test starts your paused video.",
     steps: [
-      "Use manual countdown tonight.",
-      "Do not headline Vizio support.",
-      "Revisit after primary adapter hardware validation.",
+      "Open the streaming app directly on your VIZIO TV; do not use phone/tablet/computer casting for this beta.",
+      "Enter the TV IP, start pairing, then enter the newest code shown on the TV.",
+      "Test Play sends one Play command; use Manual Play tonight if it does not start the paused video.",
     ],
-    tvSideSetting: "PIN/token pairing may be required if later pursued.",
-    pairingPersistence: "Unknown.",
-    safeGoCommand: "None for current public lane",
-    pausePolicy: "Not public; validate later.",
-    togglePolicy: "No automatic GO until discrete command behavior is proven.",
-    primaryAction: "Use manual countdown",
-    publicCopy: "Later beta; not public headline support.",
+    tvSideSetting: "Your VIZIO TV will show a code during pairing.",
+    pairingPersistence:
+      "Auth token is stored locally after pairing and must be hardware-validated by model.",
+    safeGoCommand: "VIZIO key_command Play only",
+    pausePolicy:
+      "Pause is not part of GO. Keep the video paused manually after Test Play confirmation.",
+    togglePolicy:
+      "No app launch, title launch, Cast takeover, or Play/Pause toggle at GO.",
+    primaryAction: "Pair with TV code",
+    publicCopy:
+      "VIZIO Remote Start Beta tests one local Play command only after direct-TV-app setup.",
   },
   home_assistant_webhook: {
     title: "Home Assistant bridge",
@@ -839,7 +835,7 @@ export function buildDeviceTestRequest(
       };
     case "lg_webos":
       return {
-        path: "/lg-webos/pair",
+        path: "/lg/pair/start",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -849,7 +845,7 @@ export function buildDeviceTestRequest(
       };
     case "samsung":
       return {
-        path: "/samsung/pair",
+        path: "/samsung/pair/start",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -865,7 +861,7 @@ export function buildDeviceTestRequest(
       };
     case "sony_bravia":
       return {
-        path: "/sony/remote-controller-info",
+        path: "/sony/connect",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -886,13 +882,13 @@ export function buildDeviceTestRequest(
       };
     case "vizio_smartcast":
       return {
-        path: "/vizio/key",
+        path: "/vizio/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
           url: device.url,
           authToken: device.authToken,
-          key: "pause",
+          key: "play",
         }),
       };
   }
@@ -943,7 +939,7 @@ export function buildDevicePlayRequest(
           "LG webOS needs a paired client key before GO can send Play.",
         );
       return {
-        path: "/lg-webos/media",
+        path: "/lg/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -990,7 +986,7 @@ export function buildDevicePlayRequest(
       );
     case "vizio_smartcast":
       return {
-        path: "/vizio/key",
+        path: "/vizio/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -1028,7 +1024,7 @@ export function buildDevicePauseRequest(
           "LG webOS needs a paired client key before sending Pause.",
         );
       return {
-        path: "/lg-webos/media",
+        path: "/lg/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
@@ -1056,7 +1052,7 @@ export function buildDevicePauseRequest(
       };
     case "vizio_smartcast":
       return {
-        path: "/vizio/key",
+        path: "/vizio/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,

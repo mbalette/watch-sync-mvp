@@ -55,6 +55,7 @@ import {
   DEFAULT_REMOTE_START_RUNTIME_CONFIG,
   isRemoteStartInternalBetaUnlocked,
   isRemoteStartPlatformEnabled,
+  applyQaRemoteStartBetaPlatform,
   normalizeRemoteStartRuntimeConfig,
 } from "./remote-start-runtime-config";
 import { logRemoteStartOutcome } from "./remote-start-outcome-log";
@@ -394,6 +395,22 @@ function App() {
         (choice) => choice.id === remoteWatchingMethod,
       )
     : undefined;
+  const methodHelperCopy = (
+    choice: (typeof REMOTE_START_WATCHING_METHOD_CHOICES)[number],
+  ) => {
+    if (!remoteStartRuntimeConfig.remoteStartKillSwitchEnabled)
+      return choice.helper;
+    if (choice.id === "streaming_stick_or_box")
+      return "Streaming boxes stay on manual countdown tonight.";
+    if (choice.id === "built_in_tv_app")
+      return "TV apps stay on manual countdown tonight.";
+    return choice.helper;
+  };
+  const methodNextCopy = selectedWatchingMethod
+    ? remoteStartRuntimeConfig.remoteStartKillSwitchEnabled
+      ? "Manual countdown works tonight. Remote Start setup is not available for this session."
+      : selectedWatchingMethod.nextCopy
+    : "";
   const tvRemoteRoadmap = [
     {
       label: "Roku / Roku TV",
@@ -438,7 +455,9 @@ function App() {
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (cancelled) return;
-        const nextConfig = normalizeRemoteStartRuntimeConfig(payload);
+        const nextConfig = applyQaRemoteStartBetaPlatform(
+          normalizeRemoteStartRuntimeConfig(payload),
+        );
         setRemoteStartRuntimeConfig(nextConfig);
         if (nextConfig.remoteStartKillSwitchEnabled) {
           setPendingReadyDevice(null);
@@ -2287,7 +2306,7 @@ function App() {
                         </span>
                         <span className="tv-choice-copy">
                           <strong>{choice.title}</strong>
-                          <small>{choice.helper}</small>
+                          <small>{methodHelperCopy(choice)}</small>
                         </span>
                       </button>
                     );
@@ -2295,7 +2314,7 @@ function App() {
                 </div>
                 {selectedWatchingMethod && (
                   <p className="selected-tv-hint">
-                    <strong>Good.</strong> {selectedWatchingMethod.nextCopy}
+                    <strong>Good.</strong> {methodNextCopy}
                   </p>
                 )}
               </section>
@@ -2314,7 +2333,7 @@ function App() {
                   <p>
                     {remoteWatchingMethod
                       ? "Tap the closest match. Nothing connects until you choose one and save/test it."
-                      : "This step unlocks after Step 1 so the app does not default to Roku or any other device."}
+                      : "This step unlocks after Step 1 so the app does not default to any device."}
                   </p>
                 </div>
                 {remoteWatchingMethod ? (
