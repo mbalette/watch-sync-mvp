@@ -115,9 +115,9 @@ export function applyInternalRemoteStartBetaPlatform(
   urlSearch = typeof window === "undefined" ? "" : window.location.search,
 ): RemoteStartRuntimeConfig {
   const params = new URLSearchParams(urlSearch);
-  const platform = params.get(
-    "platformBeta",
-  ) as InternalRemoteStartBetaPlatform | null;
+  const platform = (params.has("qaBetaPlatform")
+    ? params.get("qaBetaPlatform")
+    : params.get("platformBeta")) as InternalRemoteStartBetaPlatform | null;
   if (
     config.remoteStartRuntimeBetaAudience !== "internal" ||
     !isRemoteStartInternalBetaUnlocked(urlSearch)
