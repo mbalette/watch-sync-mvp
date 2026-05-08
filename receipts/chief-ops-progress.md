@@ -1,30 +1,10 @@
 # Chief Ops Progress
 
 ## Current step
-Committing proof artifacts before deploy. Source/runtime logic inspected in canonical repo; current committed delta is proof artifacts and the all-platform screenshot capture script.
-
-## Changed paths being committed
-- `scripts/capture-all-platform-internal-runtime-beta.cjs`
-- `docs/screenshots/all-platform-internal-runtime-beta/01-public-no-beta.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/02-internal-roku-only.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/03-platform-vizio-beta.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/04-platform-lg-beta.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/05-platform-sony-beta.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/06-platform-samsung-beta.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/07-test-play-failed.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/08-confirmation-gated.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/09-ready-after-confirmation-mock-only.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/10-post-go-outcome.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/11-manual-play.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/12-kill-switch-on.png`
-- `docs/screenshots/all-platform-internal-runtime-beta/13-beta-off.png`
-- `receipts/chief-ops-progress.md`
-- `receipts/chief-ops-blockers.md`
-- `receipts/chief-ops-final-receipt.md` (in-progress placeholder until deploy completes)
+Final receipt written after deploy and live verification.
 
 ## Last command run
-- `node scripts/capture-all-platform-internal-runtime-beta.cjs` plus PNG header dimension check.
-- Result: captured all 13 requested screenshots under `docs/screenshots/all-platform-internal-runtime-beta/`; viewport was 390px mobile, saved PNGs are 780px physical width due deviceScaleFactor=2.
+- Wrote `receipts/chief-ops-final-receipt.md`, `receipts/chief-ops-blockers.md`, and this progress file.
 
 ## Verification completed
 - `npm run typecheck`: passed.
@@ -35,6 +15,8 @@ Committing proof artifacts before deploy. Source/runtime logic inspected in cano
 - `npm run test:remote-start-runtime-beta:all-platforms`: passed, 45 tests.
 - no-claim grep: passed with no output.
 - screenshots: captured under `docs/screenshots/all-platform-internal-runtime-beta/`.
+- deploy: Cloudflare Pages deployment `6b59a893-cbec-4a1a-a9df-282110f3a866`, source `15d9a86`.
+- live URL gating: passed for public, Roku internal, VIZIO, LG, Sony, Samsung, and beta-off URLs.
 
 ## Next command
-- `git add docs/screenshots/all-platform-internal-runtime-beta receipts scripts/capture-all-platform-internal-runtime-beta.cjs && git commit -m "Add all-platform runtime beta proof artifacts"`
+- Commit and push final receipt artifacts.
