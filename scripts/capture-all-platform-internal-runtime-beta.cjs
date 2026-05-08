@@ -1,0 +1,26 @@
+const { chromium } = require('playwright');
+const path = require('path');
+const fs = require('fs');
+const outDir = path.join(__dirname, '..', 'docs', 'screenshots', 'all-platform-internal-runtime-beta');
+fs.mkdirSync(outDir, { recursive: true });
+const base = process.env.SCREENSHOT_BASE_URL || 'http://127.0.0.1:4173';
+const runtimeConfig = (kill = false) => ({ remoteStartPublicEnabled: false, remoteStartRuntimeBetaAudience: 'internal', remoteStartKillSwitchEnabled: kill, rokuRuntimeBetaEnabled: true, vizioRuntimeBetaEnabled: false, lgRuntimeBetaEnabled: false, samsungRuntimeBetaEnabled: false, sonyRuntimeBetaEnabled: false });
+async function setConfigRoute(page, routeConfig) { await page.unroute('**/api/remote-start-runtime-config').catch(() => {}); await page.route('**/api/remote-start-runtime-config', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(routeConfig) })); }
+async function setHelperRoute(page, ok) { await page.unroute('http://127.0.0.1:8790/**').catch(() => {}); await page.route('http://127.0.0.1:8790/**', (route) => { if (!ok) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ ok: false, error: 'Helper unavailable in screenshot mock' }) }); return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ok: true, clientKey: 'mock-lg-key', token: 'mock-samsung-token' }) }); }); }
+async function shot(page, name) { await page.screenshot({ path: path.join(outDir, name), fullPage: true }); }
+async function clickFirst(page, label) { const loc = page.getByText(label, { exact: false }).first(); if (await loc.count().catch(() => 0)) { await loc.click({ timeout: 2500 }).catch(() => {}); return true; } return false; }
+async function createRoom(page, query = '', cfg = runtimeConfig(false)) { await setConfigRoute(page, cfg); await page.goto(base + '/' + query, { waitUntil: 'networkidle' }); await clickFirst(page, 'Create room'); await page.waitForTimeout(350); }
+async function choose(page, platformLabel, method = 'TV app built into my TV') { await clickFirst(page, method); await page.waitForTimeout(200); await clickFirst(page, platformLabel); await page.waitForTimeout(350); }
+async function fillSetup(page, platform) { await page.getByLabel('TV IP address or hostname').fill('192.168.1.42'); if (platform === 'lg') await page.getByLabel('Local pairing token').fill('mock-lg-key'); if (platform === 'vizio') await page.getByLabel('Local pairing token').fill('mock-vizio-token'); if (platform === 'samsung') await page.getByLabel('Local pairing token').fill('mock-samsung-token'); if (platform === 'sony') await page.getByLabel('Sony Play IRCC code').fill('AAAAAQAAAAEAAAAUAw=='); await clickFirst(page, 'Save setup'); await page.waitForTimeout(200); }
+async function platformEntry(page, name, label, file) { await createRoom(page, `?remoteStartBeta=internal&platformBeta=${name}`); await choose(page, label); await shot(page, file); }
+async function main() { const browser = await chromium.launch({ headless: true }); const context = await browser.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true }); const page = await context.newPage();
+await createRoom(page, '', runtimeConfig(false)); await choose(page, 'Apple TV / not sure', 'Streaming stick or box'); await shot(page, '01-public-no-beta.png');
+await createRoom(page, '?remoteStartBeta=internal'); await choose(page, 'Roku / Roku TV', 'Streaming stick or box'); await shot(page, '02-internal-roku-only.png');
+await platformEntry(page, 'vizio', 'VIZIO TV', '03-platform-vizio-beta.png'); await platformEntry(page, 'lg', 'LG TV', '04-platform-lg-beta.png'); await platformEntry(page, 'sony', 'Sony Bravia TV', '05-platform-sony-beta.png'); await platformEntry(page, 'samsung', 'Samsung TV', '06-platform-samsung-beta.png');
+await setHelperRoute(page, false); await createRoom(page, '?remoteStartBeta=internal&platformBeta=vizio'); await choose(page, 'VIZIO TV'); await fillSetup(page, 'vizio'); await clickFirst(page, 'Pair with TV code'); await page.waitForTimeout(700); await shot(page, '07-test-play-failed.png');
+await setHelperRoute(page, true); await clickFirst(page, 'Pair with TV code'); await page.waitForTimeout(500); await shot(page, '08-confirmation-gated.png'); await clickFirst(page, 'Yes'); await page.waitForTimeout(300); await shot(page, '09-ready-after-confirmation-mock-only.png');
+await clickFirst(page, 'Try solo countdown'); await page.waitForTimeout(1300); await shot(page, '10-post-go-outcome.png');
+await createRoom(page, '?remoteStartBeta=off'); await choose(page, 'Apple TV / not sure', 'Streaming stick or box'); await shot(page, '11-manual-play.png');
+await createRoom(page, '?remoteStartBeta=internal', runtimeConfig(true)); await choose(page, 'Apple TV / not sure', 'Streaming stick or box'); await shot(page, '12-kill-switch-on.png');
+await createRoom(page, '?remoteStartBeta=off', runtimeConfig(false)); await choose(page, 'Apple TV / not sure', 'Streaming stick or box'); await shot(page, '13-beta-off.png'); await browser.close(); console.log(outDir); }
+main().catch((err) => { console.error(err); process.exit(1); });
