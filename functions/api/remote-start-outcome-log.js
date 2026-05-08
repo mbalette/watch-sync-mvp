@@ -13,27 +13,49 @@ const SAFE_KEYS = new Set([
   "appVersion",
 ]);
 
-function sanitize(input) {
+const FORBIDDEN_KEYS = new Set([
+  "email",
+  "phone",
+  "ip",
+  "ipAddress",
+  "host",
+  "url",
+  "titleName",
+  "profileName",
+  "streamingAccount",
+  "pairingToken",
+  "helperToken",
+  "authToken",
+  "token",
+  "rokuSerial",
+  "serialNumber",
+  "vizioToken",
+  "lgClientKey",
+  "samsungToken",
+  "sonyPsk",
+  "psk",
+  "password",
+]);
+
+export function sanitizeRemoteStartOutcome(input) {
   const clean = {};
-  if (!input || typeof input !== "object") return clean;
+  if (!input || typeof input !== "object") return { timestamp: new Date().toISOString() };
   for (const [key, value] of Object.entries(input)) {
-    if (!SAFE_KEYS.has(key)) continue;
-    if (
-      typeof value === "string" ||
-      typeof value === "boolean" ||
-      typeof value === "number"
-    )
-      clean[key] = value;
+    if (FORBIDDEN_KEYS.has(key) || !SAFE_KEYS.has(key)) continue;
+    if (typeof value === "string" || typeof value === "boolean" || typeof value === "number") clean[key] = value;
   }
-  clean.timestamp =
-    typeof clean.timestamp === "string"
-      ? clean.timestamp
-      : new Date().toISOString();
+  clean.timestamp = typeof clean.timestamp === "string" ? clean.timestamp : new Date().toISOString();
   return clean;
 }
 
+function retentionTtlSeconds(env) {
+  const days = Number(env.REMOTE_START_OUTCOME_RETENTION_DAYS ?? 30);
+  if (!Number.isFinite(days) || days <= 0) return 30 * 24 * 60 * 60;
+  return Math.floor(days * 24 * 60 * 60);
+}
+
 export async function onRequestPost({ request, env }) {
-  const payload = sanitize(await request.json().catch(() => ({})));
+  const payload = sanitizeRemoteStartOutcome(await request.json().catch(() => ({})));
   if (!payload.type) {
     return new Response(JSON.stringify({ ok: false, error: "missing_type" }), {
       status: 400,
@@ -43,7 +65,9 @@ export async function onRequestPost({ request, env }) {
 
   const id = `${Date.now()}-${crypto.randomUUID()}`;
   if (env.REMOTE_START_OUTCOME_EVENTS?.put) {
-    await env.REMOTE_START_OUTCOME_EVENTS.put(id, JSON.stringify(payload));
+    await env.REMOTE_START_OUTCOME_EVENTS.put(id, JSON.stringify(payload), {
+      expirationTtl: retentionTtlSeconds(env),
+    });
     return new Response(JSON.stringify({ ok: true, id, storage: "kv" }), {
       headers: {
         "content-type": "application/json; charset=utf-8",

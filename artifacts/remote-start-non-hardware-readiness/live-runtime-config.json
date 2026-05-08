@@ -1,0 +1,11 @@
+{
+  "remoteStartPublicEnabled": false,
+  "remoteStartRuntimeBetaAudience": "internal",
+  "remoteStartKillSwitchEnabled": false,
+  "rokuRuntimeBetaEnabled": true,
+  "vizioRuntimeBetaEnabled": false,
+  "lgRuntimeBetaEnabled": false,
+  "samsungRuntimeBetaEnabled": false,
+  "sonyRuntimeBetaEnabled": false,
+  "note": "Readiness artifact only; not a production deployment."
+}

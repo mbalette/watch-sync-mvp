@@ -21,7 +21,11 @@
     "typecheck": "tsc --noEmit",
     "test:remote-start-beta": "vitest run src/tv-remote-device.test.ts",
     "test:remote-start-runtime-beta": "vitest run src/tv-remote-device.test.ts",
-    "test:remote-start-runtime-beta:all-platforms": "vitest run src/tv-remote-device.test.ts server/tv-remote-helper.test.ts server/vizio-smartcast-remote.test.ts server/lg-webos-remote.test.ts server/samsung-tizen-remote.test.ts server/sony-bravia-remote.test.ts"
+    "test:remote-start-runtime-beta:all-platforms": "vitest run src/tv-remote-device.test.ts server/tv-remote-helper.test.ts server/vizio-smartcast-remote.test.ts server/lg-webos-remote.test.ts server/samsung-tizen-remote.test.ts server/sony-bravia-remote.test.ts",
+    "test:remote-start-simulator": "vitest run src/remote-start-simulator/index.test.ts && tsx scripts/remote-start-simulator-export.ts",
+    "remote-start:summary": "tsx scripts/remote-start-summary.ts",
+    "remote-start:events:export": "tsx scripts/remote-start-events-export.ts",
+    "remote-start:events:prune": "tsx scripts/remote-start-events-prune.ts"
   },
   "dependencies": {
     "@types/ws": "^8.18.1",

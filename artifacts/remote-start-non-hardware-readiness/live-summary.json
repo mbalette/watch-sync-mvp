@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-05-08T04:55:58.815Z",
+  "sourceNote": "Cloudflare env file detected; offline-safe export uses sanitized local fixture unless WRANGLER_REMOTE_EXPORT=1 is set. Secrets are not printed.",
+  "piiIncluded": false,
+  "retentionDays": 30,
+  "counts": {
+    "setupStarts": 2,
+    "platformSplit": {
+      "roku": 11
+    },
+    "deviceTypeSplit": {
+      "roku_tv": 8,
+      "roku_streaming": 3
+    },
+    "appSplit": {
+      "Netflix": 5,
+      "Hulu": 3,
+      "Disney+": 1,
+      "Max": 1,
+      "Prime Video": 1
+    },
+    "testPlayPass": 1,
+    "testPlayFail": 1,
+    "readyConfirmed": 1,
+    "goAttempted": 1,
+    "goSuccessSelfReport": 1,
+    "manualFallback": 1,
+    "wrongScreenOrOverlay": 1,
+    "helperUnavailable": 1,
+    "networkFailure": 1,
+    "killSwitchEvents": 1,
+    "eventCountByDay": {
+      "2026-05-01": 5,
+      "2026-05-02": 3,
+      "2026-05-03": 2,
+      "2026-05-04": 1
+    }
+  },
+  "rates": {
+    "testPlayPassRate": 50,
+    "readyRate": 100,
+    "goSuccessSelfReportRate": 100,
+    "manualFallbackRate": 9.09,
+    "wrongScreenOrOverlayRate": 9.09
+  },
+  "redactionAudit": {
+    "forbiddenFieldsChecked": [
+      "email",
+      "phone",
+      "ip",
+      "ipAddress",
+      "host",
+      "url",
+      "titleName",
+      "profileName",
+      "streamingAccount",
+      "pairingToken",
+      "helperToken",
+      "authToken",
+      "token",
+      "rokuSerial",
+      "serialNumber",
+      "vizioToken",
+      "lgClientKey",
+      "samsungToken",
+      "sonyPsk",
+      "psk",
+      "password"
+    ],
+    "leaksFound": [],
+    "passed": true
+  }
+}

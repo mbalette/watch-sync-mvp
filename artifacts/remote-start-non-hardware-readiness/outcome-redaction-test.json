@@ -1,0 +1,6 @@
+{
+  "redactionAudit": "client/API/KV/export sanitizer fixture proof",
+  "passed": true,
+  "exportedEvents": 11,
+  "survivingForbiddenFields": []
+}

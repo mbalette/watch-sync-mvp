@@ -44,7 +44,7 @@ export function normalizeRemoteStartRuntimeConfig(
     remoteStartPublicEnabled: raw.remoteStartPublicEnabled === true,
     remoteStartRuntimeBetaAudience: audience,
     remoteStartKillSwitchEnabled: raw.remoteStartKillSwitchEnabled === true,
-    rokuRuntimeBetaEnabled: raw.rokuRuntimeBetaEnabled !== false,
+    rokuRuntimeBetaEnabled: raw.rokuRuntimeBetaEnabled === true,
     vizioRuntimeBetaEnabled: raw.vizioRuntimeBetaEnabled === true,
     lgRuntimeBetaEnabled: raw.lgRuntimeBetaEnabled === true,
     samsungRuntimeBetaEnabled: raw.samsungRuntimeBetaEnabled === true,
@@ -108,16 +108,16 @@ export function isRemoteStartPlatformEnabled(
   return false;
 }
 
-export type QaRemoteStartBetaPlatform = "vizio" | "lg" | "sony" | "samsung";
+export type InternalRemoteStartBetaPlatform = "vizio" | "lg" | "sony" | "samsung";
 
-export function applyQaRemoteStartBetaPlatform(
+export function applyInternalRemoteStartBetaPlatform(
   config: RemoteStartRuntimeConfig,
   urlSearch = typeof window === "undefined" ? "" : window.location.search,
 ): RemoteStartRuntimeConfig {
   const params = new URLSearchParams(urlSearch);
   const platform = params.get(
-    "qaBetaPlatform",
-  ) as QaRemoteStartBetaPlatform | null;
+    "platformBeta",
+  ) as InternalRemoteStartBetaPlatform | null;
   if (
     config.remoteStartRuntimeBetaAudience !== "internal" ||
     !isRemoteStartInternalBetaUnlocked(urlSearch)
@@ -132,3 +132,6 @@ export function applyQaRemoteStartBetaPlatform(
     samsungRuntimeBetaEnabled: platform === "samsung",
   };
 }
+
+export const applyQaRemoteStartBetaPlatform =
+  applyInternalRemoteStartBetaPlatform;

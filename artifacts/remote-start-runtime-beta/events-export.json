@@ -1,0 +1,95 @@
+{
+  "generatedAt": "2026-05-08T05:00:21.164Z",
+  "sourceNote": "Cloudflare env file detected; offline-safe export uses sanitized local fixture unless WRANGLER_REMOTE_EXPORT=1 is set. Secrets are not printed.",
+  "piiIncluded": false,
+  "events": [
+    {
+      "type": "setup_start",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "deviceModel": "Roku TV synthetic",
+      "streamingApp": "Netflix",
+      "timestamp": "2026-05-01T10:00:00.000Z"
+    },
+    {
+      "type": "test_play_pass",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "deviceModel": "Roku TV synthetic",
+      "streamingApp": "Netflix",
+      "testPlayResult": "pass",
+      "timestamp": "2026-05-01T10:01:00.000Z"
+    },
+    {
+      "type": "ready_confirmed",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Netflix",
+      "timestamp": "2026-05-01T10:02:00.000Z"
+    },
+    {
+      "type": "go_attempted",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Netflix",
+      "timestamp": "2026-05-01T10:03:00.000Z"
+    },
+    {
+      "type": "go_sent",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Netflix",
+      "goResult": "success_self_report",
+      "timestamp": "2026-05-01T10:04:00.000Z"
+    },
+    {
+      "type": "setup_start",
+      "platform": "roku",
+      "deviceType": "roku_streaming",
+      "deviceModel": "Roku Stick synthetic",
+      "streamingApp": "Hulu",
+      "timestamp": "2026-05-02T10:00:00.000Z"
+    },
+    {
+      "type": "test_play_fail",
+      "platform": "roku",
+      "deviceType": "roku_streaming",
+      "streamingApp": "Hulu",
+      "testPlayResult": "fail",
+      "failureCode": "wrong_screen",
+      "wrongScreenOrOverlay": true,
+      "timestamp": "2026-05-02T10:01:00.000Z"
+    },
+    {
+      "type": "manual_play_fallback",
+      "platform": "roku",
+      "deviceType": "roku_streaming",
+      "streamingApp": "Hulu",
+      "manualPlayFallbackUsed": true,
+      "timestamp": "2026-05-02T10:02:00.000Z"
+    },
+    {
+      "type": "helper_unavailable",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Disney+",
+      "failureCode": "helper_unavailable",
+      "timestamp": "2026-05-03T10:00:00.000Z"
+    },
+    {
+      "type": "network_failure",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Max",
+      "failureCode": "network_blocked",
+      "timestamp": "2026-05-03T11:00:00.000Z"
+    },
+    {
+      "type": "kill_switch_block",
+      "platform": "roku",
+      "deviceType": "roku_tv",
+      "streamingApp": "Prime Video",
+      "timestamp": "2026-05-04T10:00:00.000Z"
+    }
+  ]
+}

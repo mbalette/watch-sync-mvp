@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "mode": "offline-safe",
+  "retentionDays": 30,
+  "note": "KV writes use expirationTtl where available. This prune script records retention intent without deleting production data unless a parent operator runs it with explicit Cloudflare access."
+}

@@ -1,0 +1,13 @@
+[
+  {"type":"setup_start","platform":"roku","deviceType":"roku_tv","deviceModel":"Roku TV synthetic","streamingApp":"Netflix","timestamp":"2026-05-01T10:00:00.000Z","email":"redacted@example.com"},
+  {"type":"test_play_pass","platform":"roku","deviceType":"roku_tv","deviceModel":"Roku TV synthetic","streamingApp":"Netflix","testPlayResult":"pass","timestamp":"2026-05-01T10:01:00.000Z","ip":"192.0.2.10"},
+  {"type":"ready_confirmed","platform":"roku","deviceType":"roku_tv","streamingApp":"Netflix","timestamp":"2026-05-01T10:02:00.000Z","pairingToken":"secret"},
+  {"type":"go_attempted","platform":"roku","deviceType":"roku_tv","streamingApp":"Netflix","timestamp":"2026-05-01T10:03:00.000Z"},
+  {"type":"go_sent","platform":"roku","deviceType":"roku_tv","streamingApp":"Netflix","goResult":"success_self_report","timestamp":"2026-05-01T10:04:00.000Z"},
+  {"type":"setup_start","platform":"roku","deviceType":"roku_streaming","deviceModel":"Roku Stick synthetic","streamingApp":"Hulu","timestamp":"2026-05-02T10:00:00.000Z"},
+  {"type":"test_play_fail","platform":"roku","deviceType":"roku_streaming","streamingApp":"Hulu","testPlayResult":"fail","failureCode":"wrong_screen","wrongScreenOrOverlay":true,"timestamp":"2026-05-02T10:01:00.000Z","titleName":"Private title"},
+  {"type":"manual_play_fallback","platform":"roku","deviceType":"roku_streaming","streamingApp":"Hulu","manualPlayFallbackUsed":true,"timestamp":"2026-05-02T10:02:00.000Z"},
+  {"type":"helper_unavailable","platform":"roku","deviceType":"roku_tv","streamingApp":"Disney+","failureCode":"helper_unavailable","timestamp":"2026-05-03T10:00:00.000Z","host":"private.local"},
+  {"type":"network_failure","platform":"roku","deviceType":"roku_tv","streamingApp":"Max","failureCode":"network_blocked","timestamp":"2026-05-03T11:00:00.000Z","url":"http://private"},
+  {"type":"kill_switch_block","platform":"roku","deviceType":"roku_tv","streamingApp":"Prime Video","timestamp":"2026-05-04T10:00:00.000Z","authToken":"secret"}
+]

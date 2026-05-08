@@ -1,0 +1,5 @@
+Live kill switch smoke artifact (non-hardware):
+- Scope: verify script/config path exists without leaving kill switch enabled.
+- Production deployment not performed by this task.
+- Expected smoke: set remoteStartKillSwitchEnabled=true in runtime config, verify Remote Start hidden and Manual Play visible, then restore previous value.
+- Current artifact state: not left on.

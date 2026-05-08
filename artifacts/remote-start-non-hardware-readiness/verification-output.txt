@@ -1,0 +1,144 @@
+===== npm run typecheck =====
+$ npm run typecheck
+
+> watch-sync-mvp@0.0.0 typecheck
+> tsc --noEmit
+
+EXIT 0
+
+===== npm test =====
+$ npm test
+
+> watch-sync-mvp@0.0.0 test
+> vitest run
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90m/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp[39m
+
+ [32m✓[39m src/domain.test.ts [2m([22m[2m11 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m server/philips-jointspace-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 15[2mms[22m[39m
+ [32m✓[39m src/remote-start-simulator/index.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m server/tv-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 20[2mms[22m[39m
+ [32m✓[39m server/sony-bravia-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 25[2mms[22m[39m
+ [32m✓[39m server/vizio-smartcast-remote.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m src/tv-remote-device.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m server/samsung-tizen-remote.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 52[2mms[22m[39m
+ [32m✓[39m server/realtime.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m server/lg-webos-remote.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 67[2mms[22m[39m
+ [32m✓[39m server/tv-remote-helper.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 64[2mms[22m[39m
+ [32m✓[39m server/tv-remote-targets.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/recommendations.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+ [32m✓[39m src/tmdb-recommendations.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 5[2mms[22m[39m
+ [32m✓[39m server/adb-helper-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 2[2mms[22m[39m
+ [32m✓[39m src/cast-session-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 3[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m16 passed[39m[22m[90m (16)[39m
+[2m      Tests [22m [1m[32m93 passed[39m[22m[90m (93)[39m
+[2m   Start at [22m 00:00:14
+[2m   Duration [22m 420ms[2m (transform 751ms, setup 0ms, import 1.23s, tests 376ms, environment 1ms)[22m
+
+EXIT 0
+
+===== npm run lint -- --quiet =====
+$ npm run lint -- --quiet
+
+> watch-sync-mvp@0.0.0 lint
+> eslint . --quiet
+
+EXIT 0
+
+===== npm run build =====
+$ npm run build
+
+> watch-sync-mvp@0.0.0 build
+> tsc -b && vite build
+
+vite v8.0.10 building client environment for production...
+[2K
+transforming...✓ 24 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   1.04 kB │ gzip:  0.49 kB
+dist/assets/index-Dww9wfyE.css   24.39 kB │ gzip:  5.60 kB
+dist/assets/index-B2refZw1.js   280.89 kB │ gzip: 83.95 kB
+
+✓ built in 66ms
+EXIT 0
+
+===== npm run test:remote-start-runtime-beta =====
+$ npm run test:remote-start-runtime-beta
+
+> watch-sync-mvp@0.0.0 test:remote-start-runtime-beta
+> vitest run src/tv-remote-device.test.ts
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90m/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp[39m
+
+ [32m✓[39m src/tv-remote-device.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 7[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m   Start at [22m 00:00:19
+[2m   Duration [22m 137ms[2m (transform 37ms, setup 0ms, import 46ms, tests 7ms, environment 0ms)[22m
+
+EXIT 0
+
+===== npm run test:remote-start-runtime-beta:all-platforms =====
+$ npm run test:remote-start-runtime-beta:all-platforms
+
+> watch-sync-mvp@0.0.0 test:remote-start-runtime-beta:all-platforms
+> vitest run src/tv-remote-device.test.ts server/tv-remote-helper.test.ts server/vizio-smartcast-remote.test.ts server/lg-webos-remote.test.ts server/samsung-tizen-remote.test.ts server/sony-bravia-remote.test.ts
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90m/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp[39m
+
+ [32m✓[39m server/sony-bravia-remote.test.ts [2m([22m[2m2 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+ [32m✓[39m src/tv-remote-device.test.ts [2m([22m[2m23 tests[22m[2m)[22m[32m 10[2mms[22m[39m
+ [32m✓[39m server/vizio-smartcast-remote.test.ts [2m([22m[2m3 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m server/samsung-tizen-remote.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 50[2mms[22m[39m
+ [32m✓[39m server/lg-webos-remote.test.ts [2m([22m[2m4 tests[22m[2m)[22m[32m 63[2mms[22m[39m
+ [32m✓[39m server/tv-remote-helper.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 43[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m6 passed[39m[22m[90m (6)[39m
+[2m      Tests [22m [1m[32m45 passed[39m[22m[90m (45)[39m
+[2m   Start at [22m 00:00:19
+[2m   Duration [22m 266ms[2m (transform 304ms, setup 0ms, import 505ms, tests 200ms, environment 0ms)[22m
+
+EXIT 0
+
+===== npm run test:remote-start-simulator =====
+$ npm run test:remote-start-simulator
+
+> watch-sync-mvp@0.0.0 test:remote-start-simulator
+> vitest run src/remote-start-simulator/index.test.ts && tsx scripts/remote-start-simulator-export.ts
+
+
+[1m[30m[46m RUN [49m[39m[22m [36mv4.1.5 [39m[90m/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp[39m
+
+ [32m✓[39m src/remote-start-simulator/index.test.ts [2m([22m[2m5 tests[22m[2m)[22m[32m 6[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m5 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 00:00:20
+[2m   Duration [22m 121ms[2m (transform 20ms, setup 0ms, import 27ms, tests 6ms, environment 0ms)[22m
+
+remote-start simulator matrix exported: 108 rows; hardwareValidation=false
+EXIT 0
+
+===== npm run remote-start:summary =====
+$ npm run remote-start:summary
+
+> watch-sync-mvp@0.0.0 remote-start:summary
+> tsx scripts/remote-start-summary.ts
+
+{"ok":true,"eventsSummarized":11,"output":"artifacts/remote-start-runtime-beta/live-summary.json"}
+EXIT 0
+
+===== npm run remote-start:events:export =====
+$ npm run remote-start:events:export
+
+> watch-sync-mvp@0.0.0 remote-start:events:export
+> tsx scripts/remote-start-events-export.ts
+
+{"ok":true,"exported":11,"output":"artifacts/remote-start-runtime-beta/events-export.json"}
+EXIT 0

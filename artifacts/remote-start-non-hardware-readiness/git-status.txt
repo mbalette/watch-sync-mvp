@@ -1,0 +1,20 @@
+$ git status --short --branch
+## main...origin/main
+ M functions/api/remote-start-outcome-log.js
+ M package.json
+ M src/remote-start-outcome-log.ts
+ M src/remote-start-runtime-config.ts
+?? artifacts/
+?? docs/remote-start-ops-runbook.md
+?? docs/remote-start-platform-enablement-checklists.md
+?? docs/remote-start-rollout-decision-framework.md
+?? docs/remote-start-support-runbook.md
+?? docs/screenshots/non-hardware-readiness/
+?? fixtures/
+?? scripts/remote-start-events-export.ts
+?? scripts/remote-start-events-prune.ts
+?? scripts/remote-start-kill-switch-smoke.ts
+?? scripts/remote-start-simulator-export.ts
+?? scripts/remote-start-summary.ts
+?? src/remote-start-outcome-sanitizer.ts
+?? src/remote-start-simulator/
