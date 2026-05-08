@@ -26,6 +26,8 @@ import {
   getRemoteStartCapability,
   getRemoteStartReadiness,
   getRemoteStartWizard,
+  getVisibleRemoteStartChoices,
+  getVisibleTvPlatformOptions,
   isAllowedLocalHelperUrl,
   REMOTE_START_ONBOARDING_CHOICES,
   REMOTE_START_WATCHING_METHOD_CHOICES,
@@ -39,6 +41,12 @@ import {
   type LinkedTvDevice,
   type RemoteStartWatchingMethod,
 } from './tv-remote-device'
+import {
+  DEFAULT_REMOTE_START_RUNTIME_CONFIG,
+  isRemoteStartInternalBetaUnlocked,
+  isRemoteStartPlatformEnabled,
+  normalizeRemoteStartRuntimeConfig,
+} from './remote-start-runtime-config'
 import {
   buildRecommendationDiscoverApiUrl,
   buildRecommendationSearchApiUrl,
@@ -174,6 +182,8 @@ function App() {
   const [recommendationStatus, setRecommendationStatus] = useState('Showing a safe mock catalog. Live TMDB search is optional once a server token is configured.')
   const [recommendationSource, setRecommendationSource] = useState<'mock' | 'tmdb'>('mock')
   const [linkedTvDevice, setLinkedTvDevice] = useState<LinkedTvDevice>(() => loadLinkedTvDevice() ?? normalizeLinkedTvDevice({ platform: 'roku' }))
+  const [remoteStartRuntimeConfig, setRemoteStartRuntimeConfig] = useState(DEFAULT_REMOTE_START_RUNTIME_CONFIG)
+  const [remoteStartInternalUnlocked] = useState(() => isRemoteStartInternalBetaUnlocked())
   const [remoteWatchingMethod, setRemoteWatchingMethod] = useState<RemoteStartWatchingMethod | ''>(() => {
     const saved = loadLinkedTvDevice()
     return saved ? inferWatchingMethod(saved.platform) : ''
@@ -215,7 +225,7 @@ function App() {
   const setupOpen = Boolean(room && (room.targetTimestamp === '00:00' || showSetupSheet))
   const manualModeLabel = pairedExtensions.length > 0 ? 'Laptop auto-sync available' : 'TV/manual mode'
   const tvCapability = getRemoteStartCapability(linkedTvDevice.platform)
-  const isPublicRemoteStartLane = tvCapability.publicClaimLevel === 'primary-beta' || tvCapability.publicClaimLevel === 'guided-setup-beta'
+  const isPublicRemoteStartLane = isRemoteStartPlatformEnabled(linkedTvDevice.platform, remoteStartRuntimeConfig, remoteStartInternalUnlocked) && (tvCapability.publicClaimLevel === 'primary-beta' || tvCapability.publicClaimLevel === 'guided-setup-beta')
   const linkedTvMissingConfig = linkedTvDevice.platform === 'home_assistant_webhook'
     ? !linkedTvDevice.webhookUrl?.trim()
     : platformNeedsHost(linkedTvDevice.platform) && !linkedTvDevice.host.trim()
@@ -223,13 +233,12 @@ function App() {
   const remoteStartWizard = getRemoteStartWizard(linkedTvDevice.platform)
   const canRunConnectionCheck = isPublicRemoteStartLane && tvCapability.canTestConnection && !linkedTvMissingConfig
   const canSaveRemoteSetup = !isPublicRemoteStartLane || !linkedTvMissingConfig
-  const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice)
-  const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice)
+  const remoteStartAtGoEnabled = canUseRemoteStartAtGo(linkedTvDevice, remoteStartRuntimeConfig, remoteStartInternalUnlocked)
+  const remoteStartReadiness = getRemoteStartReadiness(linkedTvDevice, Boolean(linkedTvDevice.lastTestedAt), remoteStartRuntimeConfig, remoteStartInternalUnlocked)
   const selectedTvPlatformOption = hasChosenRemotePlatform ? TV_PLATFORM_OPTIONS.find((option) => option.id === linkedTvDevice.platform) : undefined
   const selectedRemoteChoice = hasChosenRemotePlatform ? REMOTE_START_ONBOARDING_CHOICES.find((choice) => choice.platform === linkedTvDevice.platform) : undefined
-  const visibleRemoteChoices = remoteWatchingMethod
-    ? REMOTE_START_ONBOARDING_CHOICES.filter((choice) => choice.watchingMethods.includes(remoteWatchingMethod))
-    : []
+  const visibleRemoteChoices = getVisibleRemoteStartChoices(remoteWatchingMethod, remoteStartRuntimeConfig, remoteStartInternalUnlocked)
+  const visibleTvPlatformOptions = getVisibleTvPlatformOptions(remoteStartRuntimeConfig, remoteStartInternalUnlocked)
   const selectedWatchingMethod = remoteWatchingMethod
     ? REMOTE_START_WATCHING_METHOD_CHOICES.find((choice) => choice.id === remoteWatchingMethod)
     : undefined
@@ -242,6 +251,19 @@ function App() {
     { label: 'Apple TV', status: 'Manual-only', note: 'No public direct-control headline claim; reverse-engineered pairing stays internal/beta only if accepted.' },
     { label: 'Xbox / Cable / ISP boxes / Cast-AirPlay', status: 'Manual-only', note: 'Manual countdown remains the truthful public path unless a safe account/session-specific beta is separately accepted.' },
   ]
+
+  useEffect(() => {
+    let cancelled = false
+    fetch('/api/remote-start-runtime-config', { cache: 'no-store' })
+      .then((response) => response.ok ? response.json() : null)
+      .then((payload) => {
+        if (!cancelled) setRemoteStartRuntimeConfig(normalizeRemoteStartRuntimeConfig(payload))
+      })
+      .catch(() => {
+        if (!cancelled) setRemoteStartRuntimeConfig(DEFAULT_REMOTE_START_RUNTIME_CONFIG)
+      })
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => {
     const transport = createWebSocketRoomTransport({
@@ -335,7 +357,7 @@ function App() {
     saveLinkedTvDevice(savedDevice)
     setTvRemoteStatus(`Testing ${savedDevice.label} via local helper...`)
     try {
-      const request = buildDeviceTestRequest(savedDevice)
+      const request = buildDeviceTestRequest(savedDevice, remoteStartRuntimeConfig, remoteStartInternalUnlocked)
       const payload = await runHelperRequest(request)
       const updates: Partial<LinkedTvDevice> = { lastTestedAt: nowIso() }
       if (savedDevice.platform === 'lg_webos' && typeof payload?.clientKey === 'string') updates.clientKey = payload.clientKey
@@ -345,14 +367,14 @@ function App() {
     } catch (error) {
       setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} helper check failed.`)
     }
-  }, [linkedTvDevice, runHelperRequest, saveLinkedDevice])
+  }, [linkedTvDevice, remoteStartInternalUnlocked, remoteStartRuntimeConfig, runHelperRequest, saveLinkedDevice])
 
   const sendLinkedTvPlay = useCallback(async (source: 'manual' | 'countdown' = 'manual') => {
     const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
     const missingLocalConfig = savedDevice.platform === 'home_assistant_webhook'
       ? !savedDevice.webhookUrl?.trim()
       : platformNeedsHost(savedDevice.platform) && !savedDevice.host.trim()
-    if (source === 'countdown' && !canUseRemoteStartAtGo(savedDevice)) {
+    if (source === 'countdown' && !canUseRemoteStartAtGo(savedDevice, remoteStartRuntimeConfig, remoteStartInternalUnlocked)) {
       setTvRemoteStatus('Remote Start at GO is off or this platform has no safe GO Play command. Manual countdown remains the fallback.')
       return
     }
@@ -367,7 +389,7 @@ function App() {
       ? 'Sending one Home Assistant webhook GO via local helper...'
       : `Sending one ${savedDevice.label} Play command via local helper...`)
     try {
-      const request = buildDevicePlayRequest(savedDevice)
+      const request = buildDevicePlayRequest(savedDevice, remoteStartRuntimeConfig, remoteStartInternalUnlocked)
       if (savedDevice.platform === 'home_assistant_webhook') {
         request.body = {
           ...(request.body ?? {}),
@@ -383,7 +405,7 @@ function App() {
     } catch (error) {
       setTvRemoteStatus(error instanceof Error ? error.message : `${savedDevice.label} Play failed. Use manual countdown.`)
     }
-  }, [linkedTvDevice, room, runHelperRequest])
+  }, [linkedTvDevice, remoteStartInternalUnlocked, remoteStartRuntimeConfig, room, runHelperRequest])
 
   const sendLinkedTvPause = useCallback(async () => {
     const savedDevice = normalizeLinkedTvDevice(linkedTvDevice)
@@ -1403,7 +1425,7 @@ function App() {
                   }}
                   aria-label="TV remote platform"
                 >
-                  {TV_PLATFORM_OPTIONS.map((option) => (
+                  {visibleTvPlatformOptions.map((option) => (
                     <option key={option.id} value={option.id}>{option.displayLabel ?? `${option.label} — ${option.status}`}</option>
                   ))}
                 </select>

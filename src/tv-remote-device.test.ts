@@ -8,6 +8,7 @@ import {
   buildDevicePlayRequest,
   buildDeviceTestRequest,
   canUseRemoteStartAtGo,
+  getVisibleRemoteStartChoices,
   getRemoteStartCapability,
   getRemoteStartReadiness,
   getRemoteStartWizard,
@@ -15,6 +16,7 @@ import {
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
 } from './tv-remote-device'
+import { DEFAULT_REMOTE_START_RUNTIME_CONFIG, isRemoteStartInternalBetaUnlocked, normalizeRemoteStartRuntimeConfig } from './remote-start-runtime-config'
 
 describe('linked TV device helper routing', () => {
   function makeMemoryStorage(): Storage {
@@ -240,4 +242,34 @@ describe('linked TV device helper routing', () => {
     expect(request.body).toBeUndefined()
     expect(request.unsafeReason).toMatch(/manual countdown|not a public Remote Start lane/i)
   })
+
+  it('gates Roku runtime beta behind internal audience and kill switch', () => {
+    const internalRoku = normalizeRemoteStartRuntimeConfig({
+      ...DEFAULT_REMOTE_START_RUNTIME_CONFIG,
+      remoteStartPublicEnabled: false,
+      remoteStartRuntimeBetaAudience: 'internal',
+      rokuRuntimeBetaEnabled: true,
+      vizioRuntimeBetaEnabled: false,
+    })
+    const readyRoku = normalizeLinkedTvDevice({ platform: 'roku', host: '192.168.1.2', lastTestedAt: '2026-05-07T00:00:00.000Z', useRemoteStartAtGo: true })
+
+    expect(getVisibleRemoteStartChoices('streaming_stick_or_box', internalRoku, false).map((choice) => choice.platform)).toEqual(['apple_tv_manual'])
+    expect(getVisibleRemoteStartChoices('streaming_stick_or_box', internalRoku, true).map((choice) => choice.platform)).toEqual(['roku', 'apple_tv_manual'])
+    expect(canUseRemoteStartAtGo(readyRoku, internalRoku, false)).toBe(false)
+    expect(canUseRemoteStartAtGo(readyRoku, internalRoku, true)).toBe(true)
+
+    const killed = normalizeRemoteStartRuntimeConfig({ ...internalRoku, remoteStartKillSwitchEnabled: true })
+    expect(getVisibleRemoteStartChoices('streaming_stick_or_box', killed, true).map((choice) => choice.platform)).toEqual(['apple_tv_manual'])
+    expect(canUseRemoteStartAtGo(readyRoku, killed, true)).toBe(false)
+  })
+
+  it('uses URL/localStorage opt-in for internal beta without enabling public flags', () => {
+    const storage = makeMemoryStorage()
+    expect(isRemoteStartInternalBetaUnlocked('?remoteStartBeta=internal', storage)).toBe(true)
+    expect(storage.getItem('watch-sync.remoteStartInternalBeta.v1')).toBe('internal')
+    expect(isRemoteStartInternalBetaUnlocked('', storage)).toBe(true)
+    expect(isRemoteStartInternalBetaUnlocked('?remoteStartBeta=off', storage)).toBe(false)
+    expect(storage.getItem('watch-sync.remoteStartInternalBeta.v1')).toBeNull()
+  })
+
 })

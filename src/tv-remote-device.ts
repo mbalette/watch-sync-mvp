@@ -1,3 +1,4 @@
+import { DEFAULT_REMOTE_START_RUNTIME_CONFIG, isRemoteStartPlatformEnabled, type RemoteStartRuntimeConfig } from './remote-start-runtime-config'
 export type LinkedTvPlatform =
   | 'roku'
   | 'lg_webos'
@@ -497,9 +498,12 @@ export function normalizeLinkedTvDevice(device: Partial<LinkedTvDevice>): Linked
 }
 
 
-export function getRemoteStartReadiness(deviceInput: LinkedTvDevice, lastHelperOk = Boolean(deviceInput.lastTestedAt)): RemoteStartReadinessResult {
+export function getRemoteStartReadiness(deviceInput: LinkedTvDevice, lastHelperOk = Boolean(deviceInput.lastTestedAt), config?: RemoteStartRuntimeConfig, internalUnlocked = true): RemoteStartReadinessResult {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
+  if (config && !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)) {
+    return { state: 'manual_tonight', label: 'Manual countdown tonight', reason: 'Remote Start beta is paused or not enabled for this audience; manual countdown remains available.' }
+  }
   const missingConfig = device.platform === 'home_assistant_webhook'
     ? !device.webhookUrl?.trim()
     : platformNeedsHost(device.platform) && !device.host.trim()
@@ -528,13 +532,14 @@ export function getRemoteStartReadiness(deviceInput: LinkedTvDevice, lastHelperO
   return { state: 'ready', label: 'Remote Start ready', reason: 'Hardware validation and the local helper check are both current.' }
 }
 
-export function canUseRemoteStartAtGo(deviceInput: LinkedTvDevice): boolean {
+export function canUseRemoteStartAtGo(deviceInput: LinkedTvDevice, config?: RemoteStartRuntimeConfig, internalUnlocked = true): boolean {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
+  if (config && !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)) return false
   if (capability.publicClaimLevel !== 'primary-beta' && capability.publicClaimLevel !== 'guided-setup-beta') return false
   if (!device.lastTestedAt) return false
   if (!device.useRemoteStartAtGo || !capability.canAutoPlayAtGo || !capability.safeGoCommand) return false
-  if (buildDevicePlayRequest(device).unsafeReason) return false
+  if (buildDevicePlayRequest(device, config, internalUnlocked).unsafeReason) return false
   return true
 }
 
@@ -556,8 +561,9 @@ export function isAllowedLocalHelperUrl(value: string): boolean {
   return false
 }
 
-export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {
+export function buildDeviceTestRequest(deviceInput: LinkedTvDevice, config?: RemoteStartRuntimeConfig, internalUnlocked = true): HelperRequestSpec {
   const device = normalizeLinkedTvDevice(deviceInput)
+  if (config && !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)) return unsafe('Remote Start beta is paused or unavailable for this device. Use manual countdown tonight.')
   if (!getRemoteStartCapability(device.platform).canTestConnection) return unsafe(`${device.label} is manual-only. Use the manual countdown fallback.`)
   if (device.platform === 'home_assistant_webhook') return buildHomeAssistantWebhookRequest(device, true)
   if (device.platform === 'apple_tv_manual') return unsafe('Apple TV is manual-only. Watch Sync does not claim direct Apple TV remote control.')
@@ -580,9 +586,10 @@ export function buildDeviceTestRequest(deviceInput: LinkedTvDevice): HelperReque
   }
 }
 
-export function buildDevicePlayRequest(deviceInput: LinkedTvDevice): HelperRequestSpec {
+export function buildDevicePlayRequest(deviceInput: LinkedTvDevice, config?: RemoteStartRuntimeConfig, internalUnlocked = true): HelperRequestSpec {
   const device = normalizeLinkedTvDevice(deviceInput)
   const capability = getRemoteStartCapability(device.platform)
+  if (config && !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)) return unsafe('Remote Start beta is paused or unavailable for this device. Use manual countdown tonight.')
   if (capability.publicClaimLevel !== 'primary-beta' && capability.publicClaimLevel !== 'guided-setup-beta') return unsafe(`${device.label} is not a public Remote Start lane. Use manual countdown.`)
   if (!capability.canSendPlay) return unsafe(`${device.label} is manual-only. Watch Sync will not send remote commands.`)
   if (device.platform === 'home_assistant_webhook') return buildHomeAssistantWebhookRequest(device, false)
@@ -646,6 +653,20 @@ export function platformNeedsSonyIrcc(platform: LinkedTvPlatform): boolean {
 
 export function platformNeedsHost(platform: LinkedTvPlatform): boolean {
   return platform !== 'home_assistant_webhook' && platform !== 'apple_tv_manual'
+}
+
+
+export function getVisibleRemoteStartChoices(method: RemoteStartWatchingMethod | '', config: RemoteStartRuntimeConfig = DEFAULT_REMOTE_START_RUNTIME_CONFIG, internalUnlocked = false): RemoteStartOnboardingChoice[] {
+  if (!method) return []
+  return REMOTE_START_ONBOARDING_CHOICES.filter((choice) => {
+    if (!choice.watchingMethods.includes(method)) return false
+    if (choice.platform === 'apple_tv_manual') return true
+    return isRemoteStartPlatformEnabled(choice.platform, config, internalUnlocked)
+  })
+}
+
+export function getVisibleTvPlatformOptions(config: RemoteStartRuntimeConfig = DEFAULT_REMOTE_START_RUNTIME_CONFIG, internalUnlocked = false): typeof TV_PLATFORM_OPTIONS {
+  return TV_PLATFORM_OPTIONS.filter((option) => option.id === 'apple_tv_manual' || isRemoteStartPlatformEnabled(option.id, config, internalUnlocked))
 }
 
 function isLinkedTvPlatform(value: unknown): value is LinkedTvPlatform {
