@@ -2762,8 +2762,8 @@ function App() {
                       : hasRecentHelperCheck
                         ? "off or unavailable for unsupported/later/manual lanes — manual countdown remains active."
                         : "test the connection first, then enable GO Play if this lane supports it."}{" "}
-                    Public level: {tvCapability.publicClaimLevel}; hardware
-                    validated:{" "}
+                    Release lane: {tvCapability.publicClaimLevel}; real-device
+                    evidence:{" "}
                     {tvCapability.hardwareValidated ? "yes" : "not yet"}.
                   </p>
                   <div className="extension-status">{tvRemoteStatus}</div>
