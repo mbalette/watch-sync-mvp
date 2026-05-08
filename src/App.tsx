@@ -1753,7 +1753,7 @@ function App() {
               <p className="eyebrow">Invite</p>
               <h2>Send the room, then ready up together.</h2>
               <p>
-                Manual sync works with any TV. Auto-sync is for supported
+                Manual sync is available for any TV. Auto-sync is for supported
                 browser tabs.
               </p>
             </div>
@@ -2789,7 +2789,7 @@ function App() {
                 browser/helper config, not the room backend. Watch Sync servers
                 do not store HA credentials or entity IDs. Helper calls are
                 limited to localhost/private LAN/.local helper URLs before local
-                pairing details are sent. Manual countdown always works. Hosted
+                pairing details are sent. Manual countdown remains available as fallback. Hosted
                 mobile Safari/Chrome may block local-LAN helper calls; reliable
                 iPhone TV remote control needs a native app or local companion.
               </p>

@@ -100,7 +100,7 @@ Keep existing TV Remote Mode claims narrow:
 
 1. **Now / beta-only if policy ambiguity is accepted**: native iOS Roku known-IP prototype with manual IP, `query/device-info`, local-only storage, foreground-only GO handling, exactly one `Play` at GO, no SSDP, and manual fallback.
 2. **Public launch**: Build later, after Roku clarifies in writing that third-party mobile ECP use is permitted.
-3. **Phase 2 after policy clearance and MVP learning**: optional SSDP discovery only if entitlement/discovery risk is resolved and validated on real devices. Keep manual IP fallback.
+3. **Phase 2 after policy clearance and MVP learning**: optional SSDP discovery only if entitlement/discovery risk is resolved and tested on real devices. Keep manual IP fallback.
 4. **Later platforms**: require the same bar: public official API, local-only credentials, safe copy, hardware validation, and no timestamp/app-control overclaims. Apple TV remains manual-only unless a public App-Store-safe direct-control path is documented and validated.
 
 ## Required validation before public release

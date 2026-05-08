@@ -27,7 +27,7 @@ Updated: 2026-05-05
 5. **Fire TV / Android TV / Google TV**
    - Label: `Guided setup beta`
    - Setup: Developer Options/debugging; IP or pairing code; approve prompt; Test Play; Save.
-   - Copy: `Guided setup beta. Some devices may need reconnect. Manual countdown always works.`
+   - Copy: `Guided setup beta. Some devices may need reconnect. Manual countdown remains available as fallback.`
    - Fire TV split: Fire OS/Android-based devices are ADB candidates; Fire TV Vega devices are `Not supported yet` until a safe path is proven.
 
 6. **Apple TV**

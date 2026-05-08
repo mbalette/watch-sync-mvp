@@ -288,7 +288,7 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
     title: "Roku / Roku TV",
     badge: "Remote Start beta / primary",
     icon: "▣",
-    setupPreview: "Usually easiest: enter the Roku IP, save, then Test Play.",
+    setupPreview: "Start here for Roku devices: enter the Roku IP, save, then Test Play.",
     nextCopy: "Pick Roku if your TV or streaming stick says Roku.",
     recommended: true,
     watchingMethods: ["built_in_tv_app", "streaming_stick_or_box"],
@@ -405,7 +405,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     title: "Roku / Roku TV setup",
     label: "Remote Start beta / primary",
     summary:
-      "Best first Remote Start lane: local Roku ECP Play at GO after the user opens and pauses the title.",
+      "First internal Remote Start lane: local Roku ECP Play at GO after the user opens and pauses the title.",
     steps: [
       "Keep this device and your Watch Sync helper on the same Wi-Fi/LAN.",
       "If keypresses fail, enable Roku Control by mobile apps / Network access in TV settings.",
@@ -421,7 +421,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     togglePolicy: "No Play/Pause toggle at GO and no blind retries.",
     primaryAction: "Check Roku",
     publicCopy:
-      "Roku Remote Start beta sends one local Play command at GO. Manual countdown always works.",
+      "Roku Remote Start beta sends one local Play command at GO. Manual countdown remains available as fallback.",
   },
   lg_webos: {
     title: "LG webOS setup",
@@ -486,7 +486,7 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     togglePolicy: "KEYCODE_MEDIA_PLAY_PAUSE / 85 is blocked for GO.",
     primaryAction: "Connect ADB",
     publicCopy:
-      "Guided setup beta. Some devices may need reconnect. Manual countdown always works.",
+      "Guided setup beta. Some devices may need reconnect. Manual countdown remains available as fallback.",
   },
   sony_bravia: {
     title: "Sony Bravia setup",

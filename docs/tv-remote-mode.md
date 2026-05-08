@@ -27,7 +27,7 @@ Settings copy:
 
 Compatibility disclaimer:
 
-> Manual sync works with every streaming service because you control the TV yourself. Remote Start is best-effort and only sends generic remote keys on supported devices after you open the show and pause it. It does not choose Netflix/Hulu/Disney/Prime/Max content, seek inside native TV apps, verify provider availability, or guarantee every app will obey Play/Pause.
+> Manual sync is available for every streaming service because you control the TV yourself. Remote Start is best-effort and only sends generic remote keys on supported devices after you open the show and pause it. It does not choose Netflix/Hulu/Disney/Prime/Max content, seek inside native TV apps, verify provider availability, or guarantee every app will obey Play/Pause.
 
 ## Capability matrix
 
