@@ -223,7 +223,10 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
         return;
       }
 
-      if (req.method === "POST" && url.pathname === "/sony/ircc") {
+      if (
+        req.method === "POST" &&
+        (url.pathname === "/sony/ircc" || url.pathname === "/sony/keypress")
+      ) {
         const body = await readJson(req);
         await sendSony(String(body.host ?? ""), String(body.irccCode ?? ""), {
           url: optionalBodyString(body.url),

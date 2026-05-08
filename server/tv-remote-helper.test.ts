@@ -105,7 +105,7 @@ describe("TV remote helper endpoints", () => {
       postJson(`${baseUrl}/sony/connect`, { host: "127.0.0.1" }),
     ).resolves.toMatchObject({ ok: true });
     await expect(
-      postJson(`${baseUrl}/sony/ircc`, {
+      postJson(`${baseUrl}/sony/keypress`, {
         host: "127.0.0.1",
         irccCode: "AAAAAQAAAAEAAAAUAw==",
       }),

@@ -834,23 +834,29 @@ export function buildDeviceTestRequest(
         body: { host: device.host, key: "Play" },
       };
     case "lg_webos":
+      if (!device.clientKey)
+        return unsafe(
+          "LG TV needs a paired client key before Test Play can send one Play command.",
+        );
       return {
-        path: "/lg/pair/start",
+        path: "/lg/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
           url: device.url,
           clientKey: device.clientKey,
+          command: "play",
         }),
       };
     case "samsung":
       return {
-        path: "/samsung/pair/start",
+        path: "/samsung/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
           url: device.url,
           token: device.token,
+          key: "KEY_PLAY",
         }),
       };
     case "android_adb":
@@ -860,13 +866,18 @@ export function buildDeviceTestRequest(
         body: { host: device.host },
       };
     case "sony_bravia":
+      if (!device.irccCode)
+        return unsafe(
+          "Sony TV needs a discovered Play IRCC code before Test Play can send one Play command.",
+        );
       return {
-        path: "/sony/connect",
+        path: "/sony/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,
           url: device.url,
           psk: device.psk,
+          irccCode: device.irccCode,
         }),
       };
     case "philips_jointspace":
@@ -971,7 +982,7 @@ export function buildDevicePlayRequest(
           "Sony Bravia needs a Play IRCC code from remote-controller-info before GO can send Play.",
         );
       return {
-        path: "/sony/ircc",
+        path: "/sony/keypress",
         method: "POST",
         body: compactBody({
           host: device.host,

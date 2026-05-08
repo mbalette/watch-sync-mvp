@@ -323,26 +323,47 @@ describe("linked TV device helper routing", () => {
           platform: "lg_webos",
           host: "tv.local",
           url: "ws://tv.local:3000",
+          clientKey: "lg-key",
         }),
       ),
     ).toEqual({
-      path: "/lg/pair/start",
+      path: "/lg/keypress",
       method: "POST",
-      body: { host: "tv.local", url: "ws://tv.local:3000" },
+      body: {
+        host: "tv.local",
+        url: "ws://tv.local:3000",
+        clientKey: "lg-key",
+        command: "play",
+      },
     });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({ platform: "lg_webos", host: "tv.local" }),
+      ).unsafeReason,
+    ).toMatch(/client key|Test Play/i);
     expect(
       buildDeviceTestRequest(
         normalizeLinkedTvDevice({
           platform: "sony_bravia",
           host: "sony.local",
           psk: "1234",
+          irccCode: "AAAAAQAAAAEAAAAUAw==",
         }),
       ),
     ).toEqual({
-      path: "/sony/connect",
+      path: "/sony/keypress",
       method: "POST",
-      body: { host: "sony.local", psk: "1234" },
+      body: {
+        host: "sony.local",
+        psk: "1234",
+        irccCode: "AAAAAQAAAAEAAAAUAw==",
+      },
     });
+    expect(
+      buildDeviceTestRequest(
+        normalizeLinkedTvDevice({ platform: "sony_bravia", host: "sony.local" }),
+      ).unsafeReason,
+    ).toMatch(/IRCC|Test Play/i);
   });
 
   it("builds safe pause requests only where the capability allows them", () => {
@@ -657,9 +678,9 @@ describe("linked TV device helper routing", () => {
         true,
       ),
     ).toEqual({
-      path: "/lg/pair/start",
+      path: "/lg/keypress",
       method: "POST",
-      body: { host: "192.168.1.4", clientKey: "lg-key" },
+      body: { host: "192.168.1.4", clientKey: "lg-key", command: "play" },
     });
     expect(
       buildDeviceTestRequest(
@@ -672,9 +693,9 @@ describe("linked TV device helper routing", () => {
         true,
       ),
     ).toEqual({
-      path: "/samsung/pair/start",
+      path: "/samsung/keypress",
       method: "POST",
-      body: { host: "192.168.1.5", token: "sam-token" },
+      body: { host: "192.168.1.5", token: "sam-token", key: "KEY_PLAY" },
     });
     expect(
       buildDeviceTestRequest(
@@ -682,14 +703,15 @@ describe("linked TV device helper routing", () => {
           platform: "sony_bravia",
           host: "192.168.1.6",
           psk: "psk",
+          irccCode: "AAAAAQAAAAEAAAAUAw==",
         }),
         config,
         true,
       ),
     ).toEqual({
-      path: "/sony/connect",
+      path: "/sony/keypress",
       method: "POST",
-      body: { host: "192.168.1.6", psk: "psk" },
+      body: { host: "192.168.1.6", psk: "psk", irccCode: "AAAAAQAAAAEAAAAUAw==" },
     });
 
     expect(

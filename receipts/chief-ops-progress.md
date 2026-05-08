@@ -1,22 +1,28 @@
 # Chief Ops Progress
 
 ## Current step
-Final receipt written after deploy and live verification.
+Committing corrected Test Play/Sony path fix after full gates passed. Rollback support checked: installed Wrangler 4.69.0 has no `pages deployment rollback`, so final receipt will mark rollback command unverified and provide verified fallback method instead.
+
+## Changed paths
+- `src/tv-remote-device.ts`
+- `src/tv-remote-device.test.ts`
+- `server/tv-remote-helper.ts`
+- `server/tv-remote-helper.test.ts`
+- `receipts/chief-ops-progress.md`
+- `receipts/chief-ops-blockers.md`
 
 ## Last command run
-- Wrote `receipts/chief-ops-final-receipt.md`, `receipts/chief-ops-blockers.md`, and this progress file.
+- no-claim grep and `npx wrangler pages deployment --help`
+- Result: no-claim grep produced no output; Wrangler help lists list/create/tail/delete only, no rollback command.
 
-## Verification completed
+## Verification completed after fix
+- `npm run test:remote-start-runtime-beta`: passed, 23 tests.
+- `npm run test:remote-start-runtime-beta:all-platforms`: passed, 45 tests.
 - `npm run typecheck`: passed.
 - `npm test`: passed, 16 files, 93 tests.
 - `npm run lint -- --quiet`: passed.
 - `npm run build`: passed.
-- `npm run test:remote-start-runtime-beta`: passed, 23 tests.
-- `npm run test:remote-start-runtime-beta:all-platforms`: passed, 45 tests.
 - no-claim grep: passed with no output.
-- screenshots: captured under `docs/screenshots/all-platform-internal-runtime-beta/`.
-- deploy: Cloudflare Pages deployment `6b59a893-cbec-4a1a-a9df-282110f3a866`, source `15d9a86`.
-- live URL gating: passed for public, Roku internal, VIZIO, LG, Sony, Samsung, and beta-off URLs.
 
 ## Next command
-- Commit and push final receipt artifacts.
+- `git status --short --branch && git diff --stat && git add ... && git commit -m "Fix all-platform Test Play command gating"`
