@@ -1,0 +1,45 @@
+{
+  "scrollY": 0,
+  "activeEarly": [],
+  "step2": {
+    "top": 2429,
+    "bottom": 2620,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 191,
+    "text": "Step 2Pick how you watch firstThis step unlocks after Step 1 so the app does not default to any device.Choose TV app, streaming stick/box, or not sure above."
+  },
+  "step3": {
+    "top": 2632,
+    "bottom": 2772,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 140,
+    "text": "Step 3 · Connect itNo device selected yetPick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that."
+  },
+  "drawer": {
+    "top": 1807,
+    "bottom": 3000,
+    "left": 16,
+    "right": 374,
+    "width": 358,
+    "height": 1193,
+    "text": "Remote Start is local device control at countdown GO. Everyone still opens the title themselves in their own streaming app, pauses at the sync point, readies up, and uses manual countdown as the universal fallback. If enabled below, Watch Sync sends one local "
+  },
+  "visibleTexts": [
+    "BCJN5SInvite",
+    "What are you using to watch?",
+    "Choose the screen or device playing the title. Manual countdown stays as fallback for all choices; Remote Start only sends a local Play at GO when a safe path exists.",
+    "TVTV app built into my TV",
+    "▭Streaming stick or box",
+    "?Console / cable / not sure",
+    "No TV or streaming device is selected yet — choose a watch method first.",
+    "Start guided setup",
+    "Both pause at",
+    "Invite your partner, then tap ready.",
+    "I'm ready"
+  ],
+  "linkedDeviceStorage": null
+}

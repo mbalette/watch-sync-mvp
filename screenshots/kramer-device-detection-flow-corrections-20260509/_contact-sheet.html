@@ -1,0 +1,37 @@
+<!doctype html>
+<html><head><meta charset="utf-8" />
+<style>
+  body { background:#0A0A0E; color:#EDEAE5;
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    margin:0; padding:24px; }
+  h1 { font-size: 18px; font-weight: 700; letter-spacing:-0.01em; margin:0 0 6px; }
+  p.note { color:#8A8895; font-size:12px; margin:0 0 22px; }
+  .grid { display:grid; grid-template-columns: repeat(4, 1fr); gap:18px; }
+  figure { margin:0; background:#111118; border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; padding:8px; }
+  figure img { display:block; width:100%; height:auto; border-radius:8px; }
+  figcaption { color:#8A8895; font-size:10.5px; margin:8px 4px 4px;
+    letter-spacing:0.02em; line-height:1.4; }
+  figcaption strong { color:#EDEAE5; font-weight:700; display:block; margin-bottom:2px; }
+</style></head><body>
+<h1>Watch Sync — Device-detection-flow corrections (Kramer 2026-05-09)</h1>
+<p class="note">Captured by walking the live AppFlow at http://localhost:5173/ via Playwright clicks. Each frame's data-flow-screen + data-detected-device is in _state-progression.txt.</p>
+<div class="grid">
+<figure><img src="01-step1-photo.png" alt="step1-photo" /><figcaption><strong>01</strong>step1-photo</figcaption></figure>
+<figure><img src="02-tv-builtin-direct-to-device-picker.png" alt="tv-builtin-direct-to-device-picker" /><figcaption><strong>02</strong>tv-builtin-direct-to-device-picker</figcaption></figure>
+<figure><img src="03-streaming-stick-direct-to-device-picker.png" alt="streaming-stick-direct-to-device-picker" /><figcaption><strong>03</strong>streaming-stick-direct-to-device-picker</figcaption></figure>
+<figure><img src="04-console-cable-other-manual-only.png" alt="console-cable-other-manual-only" /><figcaption><strong>04</strong>console-cable-other-manual-only</figcaption></figure>
+<figure><img src="05-photo-bottom-sheet.png" alt="photo-bottom-sheet" /><figcaption><strong>05</strong>photo-bottom-sheet</figcaption></figure>
+<figure><img src="06-photo-detect-picker.png" alt="photo-detect-picker" /><figcaption><strong>06</strong>photo-detect-picker</figcaption></figure>
+<figure><img src="07-detected-apple-tv.png" alt="detected-apple-tv" /><figcaption><strong>07</strong>detected-apple-tv</figcaption></figure>
+<figure><img src="08-detected-roku.png" alt="detected-roku" /><figcaption><strong>08</strong>detected-roku</figcaption></figure>
+<figure><img src="09-detected-fire-tv.png" alt="detected-fire-tv" /><figcaption><strong>09</strong>detected-fire-tv</figcaption></figure>
+<figure><img src="10-detected-google-android-tv.png" alt="detected-google-android-tv" /><figcaption><strong>10</strong>detected-google-android-tv</figcaption></figure>
+<figure><img src="11-detected-lg-tv.png" alt="detected-lg-tv" /><figcaption><strong>11</strong>detected-lg-tv</figcaption></figure>
+<figure><img src="12-detected-samsung-tv.png" alt="detected-samsung-tv" /><figcaption><strong>12</strong>detected-samsung-tv</figcaption></figure>
+<figure><img src="13-detected-vizio-tv.png" alt="detected-vizio-tv" /><figcaption><strong>13</strong>detected-vizio-tv</figcaption></figure>
+<figure><img src="14-detected-sony-tv.png" alt="detected-sony-tv" /><figcaption><strong>14</strong>detected-sony-tv</figcaption></figure>
+<figure><img src="15-detected-unknown.png" alt="detected-unknown" /><figcaption><strong>15</strong>detected-unknown</figcaption></figure>
+<figure><img src="16-device-row-tap-direct-to-setup.png" alt="device-row-tap-direct-to-setup" /><figcaption><strong>16</strong>device-row-tap-direct-to-setup</figcaption></figure>
+</div>
+</body></html>

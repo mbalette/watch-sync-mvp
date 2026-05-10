@@ -52,12 +52,12 @@ export function createWebSocketRoomTransport(callbacks: TransportCallbacks, url 
 
   socket.addEventListener('close', () => {
     connected = false
-    callbacks.onStatus('local_fallback', 'Connection is limited. This room is only saved on this browser for now.')
+    callbacks.onStatus('local_fallback', 'Shared rooms reconnect automatically.')
   })
 
   socket.addEventListener('error', () => {
-    callbacks.onError('Connection is limited. Shared rooms may not sync until the live room reconnects.')
-    callbacks.onStatus('local_fallback', 'Connection is limited. This room is only saved on this browser for now.')
+    callbacks.onError('Shared rooms reconnect automatically.')
+    callbacks.onStatus('local_fallback', 'Shared rooms reconnect automatically.')
   })
 
   function send(payload: unknown) {

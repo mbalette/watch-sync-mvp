@@ -72,12 +72,13 @@ describe("linked TV device helper routing", () => {
     expect(
       TV_PLATFORM_OPTIONS.map((option) => [option.id, option.status]),
     ).toEqual([
-      ["roku", "Remote Start beta / primary"],
-      ["lg_webos", "Remote Start beta / primary"],
-      ["samsung", "Remote Start beta"],
-      ["sony_bravia", "Remote Start beta for supported Sony TVs"],
+      ["roku", "Auto Play (beta)"],
+      ["lg_webos", "Auto Play (beta)"],
+      ["samsung", "Auto Play (beta)"],
+      ["sony_bravia", "Auto Play (beta)"],
+      ["android_adb", "Auto Play (beta)"],
       ["philips_jointspace", "Later beta"],
-      ["vizio_smartcast", "Remote Start beta"],
+      ["vizio_smartcast", "Auto Play (beta)"],
       ["home_assistant_webhook", "Not supported yet"],
       ["apple_tv_manual", "Manual-only"],
     ]);
@@ -92,13 +93,13 @@ describe("linked TV device helper routing", () => {
     ).toEqual([
       ["built_in_tv_app", "TV app built into my TV"],
       ["streaming_stick_or_box", "Streaming stick or box"],
-      ["game_console_or_other", "Game console / cable box / not sure"],
+      ["game_console_or_other", "Console / cable / other"],
     ]);
     expect(
       REMOTE_START_WATCHING_METHOD_CHOICES.find(
         (choice) => choice.id === "streaming_stick_or_box",
       )?.nextCopy,
-    ).toMatch(/pick Roku/i);
+    ).toMatch(/choose your TV or device/i);
 
     expect(
       REMOTE_START_ONBOARDING_CHOICES.map((choice) => [
@@ -114,44 +115,50 @@ describe("linked TV device helper routing", () => {
         true,
         ["built_in_tv_app", "streaming_stick_or_box"],
       ],
+      [
+        "android_adb",
+        "Fire TV / Android TV / Google TV",
+        true,
+        ["built_in_tv_app", "streaming_stick_or_box"],
+      ],
       ["vizio_smartcast", "VIZIO TV", true, ["built_in_tv_app"]],
       ["lg_webos", "LG TV", true, ["built_in_tv_app"]],
       ["samsung", "Samsung TV", true, ["built_in_tv_app"]],
-      ["sony_bravia", "Sony Bravia TV", true, ["built_in_tv_app"]],
+      ["sony_bravia", "Sony TV", true, ["built_in_tv_app"]],
       [
         "apple_tv_manual",
-        "Apple TV / not sure",
+        "Other / console / cable box",
         false,
-        ["streaming_stick_or_box", "game_console_or_other"],
+        ["game_console_or_other"],
       ],
     ]);
     expect(
       REMOTE_START_ONBOARDING_CHOICES.find(
         (choice) => choice.platform === "apple_tv_manual",
       )?.nextCopy,
-    ).toMatch(/manual countdown/i);
+    ).toMatch(/More devices coming soon/i);
   });
 
   it("provides device-specific guided setup wizard steps and actions", () => {
     expect(getRemoteStartWizard("roku")).toMatchObject({
-      title: "Roku / Roku TV setup",
-      label: "Remote Start beta / primary",
+      title: "Roku setup",
+      label: "Auto Play (beta)",
       primaryAction: "Check Roku",
       steps: expect.arrayContaining([
-        expect.stringMatching(/same Wi-Fi/i),
+        expect.stringMatching(/same Wi/i),
         expect.stringMatching(/Control by mobile apps/i),
-        expect.stringMatching(/Test Play/i),
+        expect.stringMatching(/Roku IP address/i),
       ]),
       safeGoCommand: "Play only",
     });
     expect(getRemoteStartWizard("android_adb")).toMatchObject({
-      title: "Fire / Android / Google TV guided setup",
-      label: "Guided setup beta",
+      title: "Fire TV / Android TV setup",
+      label: "Auto Play (beta)",
       primaryAction: "Connect ADB",
       steps: expect.arrayContaining([
         expect.stringMatching(/Developer Options/i),
-        expect.stringMatching(/pairing code/i),
-        expect.stringMatching(/Some devices may need reconnect/i),
+        expect.stringMatching(/Wireless Debugging|ADB Debugging/i),
+        expect.stringMatching(/test your connection/i),
       ]),
       safeGoCommand: "KEYCODE_MEDIA_PLAY only",
     });
@@ -193,7 +200,7 @@ describe("linked TV device helper routing", () => {
       buildDevicePlayRequest(
         normalizeLinkedTvDevice({ platform: "lg_webos", host: "192.168.1.4" }),
       ).unsafeReason,
-    ).toMatch(/client key/);
+    ).toMatch(/pairing approval/);
     expect(
       buildDevicePlayRequest(
         normalizeLinkedTvDevice({
@@ -340,7 +347,7 @@ describe("linked TV device helper routing", () => {
       buildDeviceTestRequest(
         normalizeLinkedTvDevice({ platform: "lg_webos", host: "tv.local" }),
       ).unsafeReason,
-    ).toMatch(/client key|Test Play/i);
+    ).toMatch(/pairing approval|testing the connection/i);
     expect(
       buildDeviceTestRequest(
         normalizeLinkedTvDevice({
@@ -363,7 +370,7 @@ describe("linked TV device helper routing", () => {
       buildDeviceTestRequest(
         normalizeLinkedTvDevice({ platform: "sony_bravia", host: "sony.local" }),
       ).unsafeReason,
-    ).toMatch(/IRCC|Test Play/i);
+    ).toMatch(/saved Play code|testing the connection/i);
   });
 
   it("builds safe pause requests only where the capability allows them", () => {
@@ -404,7 +411,7 @@ describe("linked TV device helper routing", () => {
     ).toMatch(/toggle-risk/i);
   });
 
-  it("keeps Android/Fire/Google TV out of runtime beta picker", () => {
+  it("includes Fire/Android/Google TV in the D2C device picker without needing Apple TV as a primary fallback", () => {
     const config = normalizeRemoteStartRuntimeConfig({
       ...DEFAULT_REMOTE_START_RUNTIME_CONFIG,
       remoteStartRuntimeBetaAudience: "internal",
@@ -415,8 +422,8 @@ describe("linked TV device helper routing", () => {
       getVisibleRemoteStartChoices("streaming_stick_or_box", config, true).map(
         (choice) => choice.platform,
       ),
-    ).toEqual(["roku", "apple_tv_manual"]);
-    expect(TV_PLATFORM_OPTIONS.map((option) => option.id)).not.toContain(
+    ).toEqual(["roku"]);
+    expect(TV_PLATFORM_OPTIONS.map((option) => option.id)).toContain(
       "android_adb",
     );
   });
@@ -522,14 +529,14 @@ describe("linked TV device helper routing", () => {
         internalRoku,
         false,
       ).map((choice) => choice.platform),
-    ).toEqual(["apple_tv_manual"]);
+    ).toEqual([]);
     expect(
       getVisibleRemoteStartChoices(
         "streaming_stick_or_box",
         internalRoku,
         true,
       ).map((choice) => choice.platform),
-    ).toEqual(["roku", "apple_tv_manual"]);
+    ).toEqual(["roku"]);
     expect(canUseRemoteStartAtGo(readyRoku, internalRoku, false)).toBe(false);
     expect(canUseRemoteStartAtGo(readyRoku, internalRoku, true)).toBe(true);
 
@@ -541,7 +548,7 @@ describe("linked TV device helper routing", () => {
       getVisibleRemoteStartChoices("streaming_stick_or_box", killed, true).map(
         (choice) => choice.platform,
       ),
-    ).toEqual(["apple_tv_manual"]);
+    ).toEqual([]);
     expect(canUseRemoteStartAtGo(readyRoku, killed, true)).toBe(false);
   });
 
@@ -733,7 +740,7 @@ describe("linked TV device helper routing", () => {
       getVisibleRemoteStartChoices("streaming_stick_or_box", config, true).map(
         (choice) => choice.platform,
       ),
-    ).toEqual(["roku", "apple_tv_manual"]);
+    ).toEqual(["roku"]);
   });
 
   it("redacts platform-specific secret fields from outcome events", () => {

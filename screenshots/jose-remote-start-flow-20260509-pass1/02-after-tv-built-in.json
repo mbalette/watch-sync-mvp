@@ -1,0 +1,45 @@
+{
+  "scrollY": 2324,
+  "activeEarly": [
+    "TVTV app built into my TV"
+  ],
+  "step2": {
+    "top": 158,
+    "bottom": 283,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 126,
+    "text": "Step 2Which device is it?Tap the closest match. Nothing connects until you choose one and save/test it."
+  },
+  "step3": {
+    "top": 295,
+    "bottom": 435,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 140,
+    "text": "Step 3 · Connect itNo device selected yetPick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that."
+  },
+  "drawer": {
+    "top": -535,
+    "bottom": 664,
+    "left": 16,
+    "right": 374,
+    "width": 358,
+    "height": 1199,
+    "text": "Remote Start is local device control at countdown GO. Everyone still opens the title themselves in their own streaming app, pauses at the sync point, readies up, and uses manual countdown as the universal fallback. If enabled below, Watch Sync sends one local "
+  },
+  "visibleTexts": [
+    "?Game console / cable box / not sureConsoles, cable boxes, casting sessions, or anything not listed stay on manual countdown.",
+    "Good. Next, pick your TV brand so Watch Sync can show the right setup steps.",
+    "Which device is it?",
+    "Tap the closest match. Nothing connects until you choose one and save/test it.",
+    "No device selected yet",
+    "Pick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that.",
+    "Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Helper calls ",
+    "Laptop auto-syncSupported browser tabs only",
+    "Connection is limited. Shared rooms may not sync until the live room reconnects."
+  ],
+  "linkedDeviceStorage": null
+}

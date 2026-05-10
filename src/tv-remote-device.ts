@@ -23,10 +23,7 @@ export type PublicClaimLevel =
   | "manual-only"
   | "not-supported-yet";
 export type PlatformStatusLabel =
-  | "Remote Start beta / primary"
-  | "Remote Start beta"
-  | "Remote Start beta for supported Sony TVs"
-  | "Guided setup beta"
+  | "Auto Play (beta)"
   | "Reverse-engineered beta"
   | "Account-pairing beta"
   | "Later beta"
@@ -45,7 +42,7 @@ export type RemoteStartReadiness =
 export interface RemoteStartReadinessResult {
   state: RemoteStartReadiness;
   label:
-    | "Remote Start ready"
+    | "Auto Play ready"
     | "Reconnect needed"
     | "Needs setup"
     | "Manual countdown tonight"
@@ -258,27 +255,27 @@ export const REMOTE_START_WATCHING_METHOD_CHOICES: RemoteStartWatchingMethodChoi
       title: "TV app built into my TV",
       icon: "TV",
       helper:
-        "Netflix, Hulu, Disney+, Prime, Max, or YouTube opened from the TV home screen.",
+        "Your TV's built-in streaming apps.",
       nextCopy:
-        "Next, pick your TV brand so Watch Sync can show the right setup steps.",
+        "Next: choose your TV or device.",
     },
     {
       id: "streaming_stick_or_box",
       title: "Streaming stick or box",
       icon: "▭",
       helper:
-        "Roku devices can use the internal beta; other streaming boxes stay manual tonight.",
+        "Roku, Fire TV, Android TV, Google TV, etc.",
       nextCopy:
-        "Next, pick Roku if the device says Roku, or use manual countdown for other streaming boxes.",
+        "Next: choose your TV or device.",
     },
     {
       id: "game_console_or_other",
-      title: "Game console / cable box / not sure",
+      title: "Console / cable / other",
       icon: "?",
       helper:
-        "Consoles, cable boxes, casting sessions, or anything not listed stay on manual countdown.",
+        "Don’t see yours? More devices coming soon.",
       nextCopy:
-        "Manual countdown works tonight. Remote Start only appears when a safe local Play path exists.",
+        "You’ll both press Play on the countdown tonight.",
     },
   ];
 
@@ -286,20 +283,32 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
   {
     platform: "roku",
     title: "Roku / Roku TV",
-    badge: "Remote Start beta / primary",
+    badge: "Auto Play (beta)",
     icon: "▣",
-    setupPreview: "Start here for Roku devices: enter the Roku IP, save, then Test Play.",
+    setupPreview: "One-time setup. Works over Wi-Fi.",
     nextCopy: "Pick Roku if your TV or streaming stick says Roku.",
+    recommended: true,
+    watchingMethods: ["built_in_tv_app", "streaming_stick_or_box"],
+  },
+  {
+    platform: "android_adb",
+    title: "Fire TV / Android TV / Google TV",
+    badge: "Auto Play (beta)",
+    icon: "F",
+    setupPreview:
+      "One-time setup, about 5 min. Needs Developer Options.",
+    nextCopy:
+      "Pick this for Fire TV, Firestick, Android TV, Google TV, Chromecast with Google TV, or Google TV Streamer.",
     recommended: true,
     watchingMethods: ["built_in_tv_app", "streaming_stick_or_box"],
   },
   {
     platform: "vizio_smartcast",
     title: "VIZIO TV",
-    badge: "Remote Start beta",
+    badge: "Auto Play (beta)",
     icon: "V",
     setupPreview:
-      "Pair with the TV code, save the auth token locally, then Test Play.",
+      "Pair once with an on-screen code.",
     nextCopy: "Pick this for VIZIO TVs using the built-in TV streaming app.",
     recommended: true,
     watchingMethods: ["built_in_tv_app"],
@@ -307,10 +316,10 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
   {
     platform: "lg_webos",
     title: "LG TV",
-    badge: "Remote Start beta / primary",
+    badge: "Auto Play (beta)",
     icon: "LG",
     setupPreview:
-      "Pair on the TV prompt, save the local client key, then Test Play.",
+      "Pair once through your TV.",
     nextCopy: "Pick this for LG webOS smart TVs.",
     recommended: true,
     watchingMethods: ["built_in_tv_app"],
@@ -318,35 +327,35 @@ export const REMOTE_START_ONBOARDING_CHOICES: RemoteStartOnboardingChoice[] = [
   {
     platform: "samsung",
     title: "Samsung TV",
-    badge: "Remote Start beta",
+    badge: "Auto Play (beta)",
     icon: "S",
-    setupPreview: "Approve the TV prompt/token if shown, then Test Play.",
+    setupPreview: "Pair once through your TV.",
     nextCopy: "Pick this for Samsung/Tizen smart TVs.",
     recommended: true,
     watchingMethods: ["built_in_tv_app"],
   },
   {
     platform: "sony_bravia",
-    title: "Sony Bravia TV",
-    badge: "Remote Start beta for supported Sony TVs",
+    title: "Sony TV",
+    badge: "Auto Play (beta)",
     icon: "B",
     setupPreview:
-      "Enable IP Control on supported Bravia models, then discover/test Play.",
+      "Needs IP Control enabled. Limited models.",
     nextCopy: "Pick this for Sony Bravia TVs with IP Control.",
     recommended: true,
     watchingMethods: ["built_in_tv_app"],
   },
   {
     platform: "apple_tv_manual",
-    title: "Apple TV / not sure",
+    title: "Other / console / cable box",
     badge: "Manual-only",
-    icon: "",
+    icon: "?",
     setupPreview:
-      "No direct Remote Start claim yet. Use manual countdown tonight.",
+      "Start movie night with manual countdown.",
     nextCopy:
-      "If your device is not listed, use manual countdown. It still works with any TV.",
+      "Don’t see yours? More devices coming soon.",
     recommended: false,
-    watchingMethods: ["streaming_stick_or_box", "game_console_or_other"],
+    watchingMethods: ["game_console_or_other"],
   },
 ];
 
@@ -361,25 +370,30 @@ export const TV_PLATFORM_OPTIONS: Array<{
   {
     id: "roku",
     label: "Roku / Roku TV",
-    status: "Remote Start beta / primary",
+    status: "Auto Play (beta)",
   },
   {
     id: "lg_webos",
     label: "LG webOS",
-    status: "Remote Start beta / primary",
+    status: "Auto Play (beta)",
     requiresSecret: true,
   },
   {
     id: "samsung",
     label: "Samsung / Tizen",
-    status: "Remote Start beta",
+    status: "Auto Play (beta)",
     requiresSecret: true,
   },
   {
     id: "sony_bravia",
     label: "Sony / Bravia",
-    status: "Remote Start beta for supported Sony TVs",
+    status: "Auto Play (beta)",
     requiresSecret: true,
+  },
+  {
+    id: "android_adb",
+    label: "Fire TV / Android TV / Google TV",
+    status: "Auto Play (beta)",
   },
   {
     id: "philips_jointspace",
@@ -389,7 +403,7 @@ export const TV_PLATFORM_OPTIONS: Array<{
   {
     id: "vizio_smartcast",
     label: "VIZIO TV",
-    status: "Remote Start beta",
+    status: "Auto Play (beta)",
     requiresSecret: true,
   },
   {
@@ -402,122 +416,122 @@ export const TV_PLATFORM_OPTIONS: Array<{
 
 const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
   roku: {
-    title: "Roku / Roku TV setup",
-    label: "Remote Start beta / primary",
+    title: "Roku setup",
+    label: "Auto Play (beta)",
     summary:
-      "First internal Remote Start lane: local Roku ECP Play at GO after the user opens and pauses the title.",
+      "One-time setup — takes about 1 minute.",
     steps: [
-      "Keep this device and your Watch Sync helper on the same Wi-Fi/LAN.",
-      "If keypresses fail, enable Roku Control by mobile apps / Network access in TV settings.",
-      "Enter the Roku IP or hostname, save locally, then Test Play before movie night.",
+      "Make sure your phone/computer and Roku are on the same Wi‑Fi.",
+      "If setup fails, turn on “Control by mobile apps” in Roku settings.",
+      "Enter your Roku IP address. Find this in Settings → Network → About on your Roku. Usually 192.168.X.XX",
     ],
     tvSideSetting:
-      "May require Control by mobile apps / Network access on newer Roku OS builds.",
+      "Your Roku may ask you to allow mobile app control.",
     pairingPersistence:
-      "No token pairing. Reliability depends on LAN access, device reachability, and IP/discovery.",
+      "Usually stays ready on the same Wi‑Fi. If your Roku address changes, reconnect it.",
     safeGoCommand: "Play only",
     pausePolicy:
       "Pause is not exposed as a safe automatic command. Pause manually at 00:00.",
     togglePolicy: "No Play/Pause toggle at GO and no blind retries.",
     primaryAction: "Check Roku",
     publicCopy:
-      "Roku Remote Start beta sends one local Play command at GO. Manual countdown remains available as fallback.",
+      "Roku Auto Play (beta) starts only after setup and a connection test.",
   },
   lg_webos: {
-    title: "LG webOS setup",
-    label: "Remote Start beta / primary",
+    title: "LG TV setup",
+    label: "Auto Play (beta)",
     summary:
-      "Pair with the TV prompt, save the LG client key locally, then test discrete Play/Pause.",
+      "One-time setup — takes about 2 minutes. After this, we press Play for you every movie night.",
     steps: [
-      "Enter the LG TV IP or hostname and keep the helper on the same LAN.",
-      "Run Pair/Test and accept the pairing prompt on the TV.",
-      "Save the client key locally, then Test Play/Pause before movie night.",
+      "Make sure your phone/computer and LG TV are on the same Wi‑Fi.",
+      "Approve the on-screen prompt on your TV.",
+      "Save setup, then test your connection before movie night.",
     ],
-    tvSideSetting: "LG Connect Apps / TV prompt pairing may be required.",
+    tvSideSetting: "Your LG TV may show an on-screen prompt.",
     pairingPersistence:
-      "Client key is expected to persist but must be hardware-validated after sleep/reboot/helper restart.",
+      "Usually stays ready after pairing. Reconnect if your TV sleeps or changes Wi‑Fi.",
     safeGoCommand: "SSAP media.controls/play only",
     pausePolicy:
       "Discrete Pause exists for test/setup; GO still sends Play only.",
     togglePolicy: "No Play/Pause toggle at GO.",
     primaryAction: "Pair TV",
     publicCopy:
-      "LG webOS Remote Start beta uses local TV pairing. Hardware behavior is not verified yet.",
+      "LG Auto Play (beta) starts only after setup and a connection test.",
   },
   samsung: {
-    title: "Samsung Tizen setup",
-    label: "Remote Start beta",
+    title: "Samsung TV setup",
+    label: "Auto Play (beta)",
     summary:
-      "Beta local-key path after Samsung TV approval/token when required; model variance expected.",
+      "One-time setup. Approve your Samsung TV if it asks, then test your connection.",
     steps: [
-      "Enter the Samsung TV IP or hostname and optional protocol URL/token if already known.",
-      "Run Pair/Test and approve the TV prompt if shown.",
-      "Save the token locally, then Test Play/Pause on a paused video.",
+      "Enter your Samsung TV IP address.",
+      "Approve the on-screen prompt on your TV if one appears.",
+      "Save setup, then test your connection on a paused video.",
     ],
     tvSideSetting:
-      "TV approval prompt/token may be required; ports and behavior vary by model/firmware.",
+      "Your TV may ask you to approve this device.",
     pairingPersistence:
-      "Token persistence is model-dependent and hardware-unverified.",
+      "Some Samsung TVs may need reconnecting later.",
     safeGoCommand: "KEY_PLAY only",
     pausePolicy:
       "KEY_PAUSE is available for testing where it behaves discretely.",
     togglePolicy: "Do not use KEY_PLAYPAUSE at GO.",
     primaryAction: "Pair TV",
     publicCopy:
-      "Samsung Remote Start beta is for supported TVs after local approval; not official universal support.",
+      "Samsung Auto Play (beta) starts only after setup and a connection test.",
   },
   android_adb: {
-    title: "Fire / Android / Google TV guided setup",
-    label: "Guided setup beta",
+    title: "Fire TV / Android TV setup",
+    label: "Auto Play (beta)",
     summary:
-      "Guided ADB beta for Fire OS, Android TV, Google TV, Nvidia Shield, Onn, Chromecast with Google TV, and Google TV Streamer. Fire TV Vega is not supported yet.",
+      "One-time setup — takes about 5 minutes. This one needs Developer Options enabled on your TV. We’ll walk you through it.",
     steps: [
-      "Open Developer Options / debugging on the TV or streamer.",
-      "Enter the device IP/port or wireless debugging pairing code flow, then approve the prompt.",
-      "Run Connect ADB + Test Play. Some devices may need reconnect before movie night.",
+      "Enable Developer Options on your TV or streaming device.",
+      "Turn on Wireless Debugging or ADB Debugging, then approve the on-screen prompt on your TV.",
+      "Pair your TV, then test your connection before movie night.",
     ],
     tvSideSetting:
-      "Developer Options, ADB/wireless debugging, and an approval prompt are required.",
+      "Developer Options and an on-screen approval prompt are required.",
     pairingPersistence:
-      "May persist with stable ADB keys, but sleep/reboot/network changes remain hardware-unverified.",
+      "Some devices may need reconnecting after sleep, reboot, or Wi‑Fi changes.",
     safeGoCommand: "KEYCODE_MEDIA_PLAY only",
     pausePolicy:
       "KEYCODE_MEDIA_PAUSE is available for setup/testing; GO uses Play only.",
     togglePolicy: "KEYCODE_MEDIA_PLAY_PAUSE / 85 is blocked for GO.",
     primaryAction: "Connect ADB",
     publicCopy:
-      "Guided setup beta. Some devices may need reconnect. Manual countdown remains available as fallback.",
+      "Auto Play beta. Some devices may need reconnecting.",
   },
   sony_bravia: {
-    title: "Sony Bravia setup",
-    label: "Remote Start beta for supported Sony TVs",
+    title: "Sony TV setup",
+    label: "Auto Play (beta)",
     summary:
-      "Supported Bravia/IP Control models can use local IRCC Play after IP Control and Play-code discovery.",
+      "One-time setup for supported Sony TVs. Turn on TV control, then test your connection.",
     steps: [
-      "Enable IP Control on the supported Sony Bravia TV and configure PSK/PIN if needed.",
-      "Enter the TV IP/hostname and run remote-controller-info to discover the Play IRCC code.",
-      "Save the Play IRCC code locally, then Test Play before movie night.",
+      "Turn on IP Control in your Sony TV settings if your model supports it.",
+      "Enter your Sony TV IP address and find the Play code.",
+      "Save setup, then test your connection before movie night.",
     ],
     tvSideSetting:
-      "IP Control must be enabled and supported by the model; PSK/PIN may be required.",
+      "Your Sony TV must support IP Control. Some models ask for a PIN or password.",
     pairingPersistence:
-      "Expected to persist while IP Control/PSK remain stable, but hardware validation is required.",
+      "Usually stays ready if your TV settings and Wi‑Fi stay the same.",
     safeGoCommand: "Discovered Play IRCC code only",
     pausePolicy: "Pause is not exposed as safe in the current panel.",
     togglePolicy: "No toggle command at GO.",
     primaryAction: "Discover Play code",
     publicCopy:
-      "Remote Start beta for supported Sony TVs only. Do not imply all Sony Google TVs work.",
+      "Sony Auto Play (beta) supports setup only on compatible Sony TVs.",
   },
   philips_jointspace: {
-    title: "Philips JointSpace later beta",
+    title: "Philips TV",
     label: "Later beta",
     summary:
-      "Later/experimental only because common paths expose PlayPause toggle risk.",
+      "Manual countdown is the right path for this TV tonight.",
     steps: [
-      "Use manual countdown tonight.",
-      "Only revisit this adapter after primary lanes are validated.",
-      "Do not enable automatic GO unless a discrete Play path is proven.",
+      "Start movie night with manual countdown.",
+      "Try another device if you have one.",
+      "We’ll get Auto Play set up in a later session.",
     ],
     tvSideSetting: "Model/API-generation settings vary.",
     pairingPersistence: "Unknown.",
@@ -528,32 +542,32 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     publicCopy: "Later beta only; manual countdown remains the public path.",
   },
   vizio_smartcast: {
-    title: "VIZIO Remote Start Beta",
-    label: "Remote Start beta",
+    title: "VIZIO TV setup",
+    label: "Auto Play (beta)",
     summary:
-      "Watch Sync will pair with your VIZIO TV and test one Play command. Remote Start is only enabled if the test starts your paused video.",
+      "Pair once with an on-screen code, then test your connection.",
     steps: [
-      "Open the streaming app directly on your VIZIO TV; do not use phone/tablet/computer casting for this beta.",
-      "Enter the TV IP, start pairing, then enter the newest code shown on the TV.",
-      "Test Play sends one Play command; use Manual Play tonight if it does not start the paused video.",
+      "Open the streaming app directly on your VIZIO TV.",
+      "Enter your VIZIO TV IP address, then type the code shown on the TV.",
+      "Test your connection. If it does not start the paused video, start movie night anyway.",
     ],
     tvSideSetting: "Your VIZIO TV will show a code during pairing.",
     pairingPersistence:
-      "Auth token is stored locally after pairing and must be hardware-validated by model.",
+      "Pairing is saved on this device. Some models may need reconnecting.",
     safeGoCommand: "VIZIO key_command Play only",
     pausePolicy:
-      "Pause is not part of GO. Keep the video paused manually after Test Play confirmation.",
+      "Pause is not part of PLAY. After the test starts your video, pause it again.",
     togglePolicy:
       "No app launch, title launch, Cast takeover, or Play/Pause toggle at GO.",
     primaryAction: "Pair with TV code",
     publicCopy:
-      "VIZIO Remote Start Beta tests one local Play command only after direct-TV-app setup.",
+      "VIZIO Auto Play starts only after setup and a connection test.",
   },
   home_assistant_webhook: {
-    title: "Home Assistant bridge",
+    title: "Other setup",
     label: "Not supported yet",
     summary:
-      "Not a D2C default. Only use if a user already has local Home Assistant automation.",
+      "Manual countdown is the right path tonight unless you already have your own local automation.",
     steps: [
       "Use manual countdown unless you already run HA locally.",
       "Keep webhook URLs local/private.",
@@ -571,22 +585,22 @@ const REMOTE_START_WIZARDS: Record<LinkedTvPlatform, RemoteStartWizardSpec> = {
     title: "Apple TV",
     label: "Manual-only",
     summary:
-      "Manual-only by default. No public App-Store-safe direct-control path is proven.",
+      "Manual countdown is the right path for Apple TV tonight.",
     steps: [
       "Open the title on Apple TV yourself.",
       "Pause at 00:00.",
-      "Use the Watch Sync countdown and press Play manually at GO.",
+      "Use the countdown and press Play yourself at PLAY.",
     ],
     tvSideSetting: "None for Watch Sync public control.",
     pairingPersistence:
-      "No public Watch Sync pairing. Reverse-engineered pairing is not headline support.",
+      "No setup needed.",
     safeGoCommand: "None",
     pausePolicy: "Manual pause only.",
     togglePolicy:
       "No private Apple APIs and no reverse-engineered public headline claim.",
     primaryAction: "Use manual countdown",
     publicCopy:
-      "Apple TV stays manual-only unless an explicit internal beta is accepted later.",
+      "Apple TV uses manual countdown tonight.",
   },
 };
 
@@ -672,7 +686,7 @@ export function getRemoteStartReadiness(
       state: "manual_tonight",
       label: "Manual countdown tonight",
       reason:
-        "Remote Start beta is paused or not enabled for this audience; manual countdown remains available.",
+        "Auto Play beta is paused for this session; manual countdown remains available.",
     };
   }
   const missingConfig =
@@ -684,7 +698,7 @@ export function getRemoteStartReadiness(
     return {
       state: "unsupported",
       label: "Not supported yet",
-      reason: "This platform is not currently a D2C Remote Start target.",
+      reason: "This device is not currently an Auto Play setup target.",
     };
   }
   if (
@@ -695,7 +709,7 @@ export function getRemoteStartReadiness(
       state: "manual_tonight",
       label: "Manual countdown tonight",
       reason:
-        "This platform stays manual-only unless a safe public control path is proven.",
+        "This device uses manual countdown tonight.",
     };
   }
   if (missingConfig) {
@@ -703,7 +717,7 @@ export function getRemoteStartReadiness(
       state: "not_configured",
       label: "Needs setup",
       reason:
-        "Add the local device/helper details before enabling Remote Start.",
+        "Add the local device/helper details before enabling Auto Play.",
     };
   }
   if (
@@ -714,7 +728,7 @@ export function getRemoteStartReadiness(
     return {
       state: "needs_setup",
       label: "Needs setup",
-      reason: "LG webOS needs TV prompt pairing and a saved client key.",
+      reason: "LG TV needs pairing approval before Auto Play.",
     };
   }
   if (device.platform === "sony_bravia" && !device.irccCode) {
@@ -722,7 +736,7 @@ export function getRemoteStartReadiness(
       state: "needs_setup",
       label: "Needs setup",
       reason:
-        "Sony Bravia needs IP Control enabled and a discovered Play IRCC code.",
+        "Sony TV needs TV control enabled and a saved Play code.",
     };
   }
   if (!lastHelperOk) {
@@ -730,7 +744,7 @@ export function getRemoteStartReadiness(
       state: "reconnect_needed",
       label: "Reconnect needed",
       reason:
-        "Run Pair/Test before movie night so the helper can confirm the device is reachable.",
+        "Test your connection before movie night.",
     };
   }
   if (!capability.hardwareValidated) {
@@ -738,13 +752,13 @@ export function getRemoteStartReadiness(
       state: "unverified_hardware_behavior",
       label: "Device behavior not verified yet",
       reason:
-        "Mock/helper checks passed, but real TV/app behavior is still hardware-unverified.",
+        "Software checks passed, but real TV behavior still needs a device test.",
     };
   }
   return {
     state: "ready",
-    label: "Remote Start ready",
-    reason: "Hardware validation and the local helper check are both current.",
+    label: "Auto Play ready",
+    reason: "Connection test and real-device check are current.",
   };
 }
 
@@ -813,7 +827,7 @@ export function buildDeviceTestRequest(
     !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)
   )
     return unsafe(
-      "Remote Start beta is paused or unavailable for this device. Use manual countdown tonight.",
+      "Auto Play beta is paused or unavailable for this device. Start movie night with manual countdown.",
     );
   if (!getRemoteStartCapability(device.platform).canTestConnection)
     return unsafe(
@@ -836,7 +850,7 @@ export function buildDeviceTestRequest(
     case "lg_webos":
       if (!device.clientKey)
         return unsafe(
-          "LG TV needs a paired client key before Test Play can send one Play command.",
+          "LG TV needs pairing approval before testing the connection.",
         );
       return {
         path: "/lg/keypress",
@@ -868,7 +882,7 @@ export function buildDeviceTestRequest(
     case "sony_bravia":
       if (!device.irccCode)
         return unsafe(
-          "Sony TV needs a discovered Play IRCC code before Test Play can send one Play command.",
+          "Sony TV needs a saved Play code before testing the connection.",
         );
       return {
         path: "/sony/keypress",
@@ -917,14 +931,14 @@ export function buildDevicePlayRequest(
     !isRemoteStartPlatformEnabled(device.platform, config, internalUnlocked)
   )
     return unsafe(
-      "Remote Start beta is paused or unavailable for this device. Use manual countdown tonight.",
+      "Auto Play beta is paused or unavailable for this device. Start movie night with manual countdown.",
     );
   if (
     capability.publicClaimLevel !== "primary-beta" &&
     capability.publicClaimLevel !== "guided-setup-beta"
   )
     return unsafe(
-      `${device.label} is not a public Remote Start lane. Use manual countdown.`,
+      `${device.label} is not a public Auto Play lane. Use manual countdown.`,
     );
   if (!capability.canSendPlay)
     return unsafe(
@@ -947,7 +961,7 @@ export function buildDevicePlayRequest(
     case "lg_webos":
       if (!device.clientKey)
         return unsafe(
-          "LG webOS needs a paired client key before GO can send Play.",
+          "LG TV needs pairing approval before Auto Play can press Play.",
         );
       return {
         path: "/lg/keypress",
@@ -1017,7 +1031,7 @@ export function buildDevicePauseRequest(
   if (!capability.canSendPause) {
     if (device.platform === "roku")
       return unsafe(
-        "Roku Pause is not claimed safe for this Remote Start panel. Pause manually at the sync point.",
+        "Roku Pause is not claimed safe for this Auto Play panel. Pause manually at the sync point.",
       );
     if (device.platform === "philips_jointspace")
       return unsafe(
@@ -1032,7 +1046,7 @@ export function buildDevicePauseRequest(
     case "lg_webos":
       if (!device.clientKey)
         return unsafe(
-          "LG webOS needs a paired client key before sending Pause.",
+          "LG TV needs pairing approval before testing pause.",
         );
       return {
         path: "/lg/keypress",
@@ -1122,6 +1136,9 @@ export function getVisibleTvPlatformOptions(
   return TV_PLATFORM_OPTIONS.filter(
     (option) =>
       option.id === "apple_tv_manual" ||
+      REMOTE_START_ONBOARDING_CHOICES.some(
+        (choice) => choice.platform === option.id,
+      ) ||
       isRemoteStartPlatformEnabled(option.id, config, internalUnlocked),
   );
 }
@@ -1135,7 +1152,7 @@ function isLinkedTvPlatform(value: unknown): value is LinkedTvPlatform {
 
 function requireHost(device: LinkedTvDevice): void {
   if (!device.host.trim())
-    throw new Error("Enter a TV IP address or hostname first.");
+    throw new Error("Enter your TV IP address first.");
 }
 
 function buildHomeAssistantWebhookRequest(

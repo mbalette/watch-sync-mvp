@@ -1,0 +1,20 @@
+01-landing-initial.png  screen=landing  80917B  sha256=037dcfbd934a308c25af33f6307ecdeff7d4bc7c9c6c491bccbf03d9e0cdb3d7  // landing — name field + Create a room visible
+02-step1-photo.png  screen=step1-photo  144509B  sha256=6dc68bfe4de930ee71ca8a15b0da1cc10bbe56514abef2196824746fe9e9dde2  // after Create a room — Step 1 photo ID screen, no countdown/tracker stacked below
+03-photo-bottom-sheet.png  screen=photo-sheet  209165B  sha256=8b2416a7a526a315e11c654fb5d2126bf37e03dec8ec2c70767b3088893bd586  // tap photo hero — bottom sheet open with Take/Choose/Pick manually
+04-step1-category-empty.png  screen=step1-category  88036B  sha256=b4600170fec1da5b83effcfcbeb744114dc8781794aa08f103d806cda2824b71  // Pick manually instead — Step 1 category screen with progress dots, no selection
+05-step1-category-selected.png  screen=step1-category  88614B  sha256=614079877060236c54b9b2fa7594fe4c215d67b5cd4c24ec47cb93a3455da87c  // tap Streaming stick or box — selected highlight + Next active
+06-step2-device-picker.png  screen=step2-device  102601B  sha256=cfd6a07363d0dff2793a14ebc91b1a7284dc8dfe5dd611d6d6205e3bc631c119  // Next — Step 2 device picker, 7 devices, Roku preselected
+07-step2-device-selected-lg.png  screen=step2-device  102718B  sha256=9da015caedfd890bea6c8ab9c55b915081e16ac64adf9598e959e3be9fd88aa8  // tap LG TV — selected indicator moves to LG
+08-step2-roku-reselected.png  screen=step2-device  102912B  sha256=43ac4432e031d5b4148b442be6b1a1c2d373f3113c655b10c5422c8da28ff2a2  // tap Roku/Roku TV — selected back on Roku before advancing
+09-step3-roku-setup.png  screen=step3-roku  102753B  sha256=2450443453bff1e6b0a2266f8b51377c30573442ffb279c149ff58ecd913e8ca  // Next — Step 3 Roku setup numbered cards + Connect & test
+10-result-success.png  screen=result-success  69525B  sha256=e25dd74c46c65eb6da17fb4fc97a3ca11e6fa29e498e9c16f02f0d5ee6c38d96  // Connect & test — success result screen (Auto Play ready)
+11-countdown-auto.png  screen=countdown-auto  44566B  sha256=cbcd1993da45d87137ea6608755e62e82428556d2c28322762d0a3fc91a069b4  // Continue to countdown — auto-play countdown with both ready chips
+12-post-title-prompt.png  screen=post-title  70818B  sha256=2d6ac83716b00109c55bbeccfe972debd41dbd356d3759d5a6772deb0f2b9e2c  // after countdown finishes — post-session title prompt screen
+13-tracker-titled.png  screen=tracker  180997B  sha256=a7de56b04be9804ef4937f3838ec8b64dc5aa8795db175a30c84ba299afc9c1a  // Save title via suggestion — Watch Tracker (free) with titled latest entry
+14-paywall.png  screen=paywall  111777B  sha256=b2c33dd7fdaa1206306cae70d96cac60dc2e8d0df6b6243c2cea0136c44f8dd3  // tap See what's in Pro — paywall comparison screen
+15-browse-find-watch.png  screen=browse  98906B  sha256=d92088312d8abb7212c4d8fd6259c0eb183d68d06827c8d9bc64f23f5abf783c  // Find watch — browse screen with mock catalog rows + Add buttons
+16-browse-two-added.png  screen=browse  100713B  sha256=b4995a73a2edeca91a115e97de1166c045bfe821b97b935eab9bb0a0c06647ee  // Tap Add on two titles — Added pill turns green
+17-tonights-list.png  screen=tonights  62111B  sha256=f6cc2b23f5fd6cd90b849c7df0270c0e545ad21a09acb6de39bd4a9b705dc7e0  // tap Tonight's list — saved picks screen with 2 entries
+18-result-failed.png  screen=result-fail  80549B  sha256=702b0f517fd052312457d9c4cc2357ab6d3cbba5abdbc8c38e81bb5d350e01c7  // Demo failure toggle — failure result screen with Retry / Try different / Manual anyway
+19-countdown-manual.png  screen=countdown-manual  52678B  sha256=a88b61b4e66ce967fa17cd4fc0291a205969a53c1e2408d9ea010719d90cdcae  // Start movie night anyway — manual countdown with Auto Play not set up banner
+20-apple-tv-steer.png  screen=apple-steer  70567B  sha256=2f61f5743ab93d528b2b426873f02cf735a099fa28f24b20f7947d514e5a29a0  // tap Console / cable / other — Apple TV steer screen

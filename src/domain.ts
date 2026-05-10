@@ -556,7 +556,7 @@ export function applyRoomEvent(room: RoomState, event: RoomEvent): RoomState {
         targetTimestamp: '00:00',
         readyState: resetReady(normalizedRoom),
         countdownState: { phase: 'idle', durationSeconds: 3 },
-        lastSignal: makeSignal(normalizedRoom, event.actorId, 'recommendation', `Tonight's watch: ${event.item.title} — pause at 00:00, then ready up.`, event.at),
+        lastSignal: makeSignal(normalizedRoom, event.actorId, 'recommendation', `Tonight's watch: ${event.item.title} — pause at 00:00, then get ready.`, event.at),
       }
     case 'next_episode_requested':
       return {

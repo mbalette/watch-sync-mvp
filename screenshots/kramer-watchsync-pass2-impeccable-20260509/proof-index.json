@@ -1,0 +1,234 @@
+[
+  {
+    "name": "ref-01-landing",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-01-landing.png",
+    "bytes": 75524,
+    "width": 780,
+    "height": 1688,
+    "sha256": "3e35bdf8e00d45b10da1c948135c81069eaf5a9abfb5979248e29b7558ac252c"
+  },
+  {
+    "name": "ref-02-step1-photo-id",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-02-step1-photo-id.png",
+    "bytes": 140203,
+    "width": 780,
+    "height": 1688,
+    "sha256": "91fee698f36f8c21d68d6c032aca4cd18f4b8d119621dabb53b0823157540ee3"
+  },
+  {
+    "name": "ref-03-photo-bottom-sheet",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-03-photo-bottom-sheet.png",
+    "bytes": 210272,
+    "width": 780,
+    "height": 1688,
+    "sha256": "6504c08202e8228c4463cca7df40ffc384c090089d49ed523b500fd7f84fe483"
+  },
+  {
+    "name": "ref-04-manual-step1-category",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-04-manual-step1-category.png",
+    "bytes": 84287,
+    "width": 780,
+    "height": 1688,
+    "sha256": "333df3fa80b4ca757e49bde321b17b6609ba687fdd2353c64b194bf4913ba669"
+  },
+  {
+    "name": "ref-05-manual-step2-device-picker",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-05-manual-step2-device-picker.png",
+    "bytes": 96108,
+    "width": 780,
+    "height": 1688,
+    "sha256": "1292ff30345ab0991ca7f4f1eb3a2b79f05303ff162f2562340ed807c15cc351"
+  },
+  {
+    "name": "ref-06-manual-step3-roku-setup",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-06-manual-step3-roku-setup.png",
+    "bytes": 90815,
+    "width": 780,
+    "height": 1688,
+    "sha256": "e207af542c8ba8e6979172a62205de25a5a779a997f8f83fa475c863a975fe61"
+  },
+  {
+    "name": "ref-07-result-success",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-07-result-success.png",
+    "bytes": 58576,
+    "width": 780,
+    "height": 1688,
+    "sha256": "5d8fc9889f2b24bb44a420956bed4eeaa57cb1662a75e496df4def790315ebfe"
+  },
+  {
+    "name": "ref-08-result-failed",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-08-result-failed.png",
+    "bytes": 74936,
+    "width": 780,
+    "height": 1688,
+    "sha256": "9bf587576e199d3a2b94b580e7df2ce87971f37c59d8ac7bba4779ae87e96e36"
+  },
+  {
+    "name": "ref-09-apple-tv-steer",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-09-apple-tv-steer.png",
+    "bytes": 63811,
+    "width": 780,
+    "height": 1688,
+    "sha256": "5374dde43d4b199a88f8de1f6d6451f1272cc486516c11d3def6c3b8ad866cad"
+  },
+  {
+    "name": "ref-10-countdown-auto-play",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-10-countdown-auto-play.png",
+    "bytes": 44814,
+    "width": 780,
+    "height": 1688,
+    "sha256": "8edec6941cd5e36d52fe551a9d93337c862d8d576045284d66f2b00d0bc29aa9"
+  },
+  {
+    "name": "ref-11-countdown-no-auto-play",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-11-countdown-no-auto-play.png",
+    "bytes": 51472,
+    "width": 780,
+    "height": 1688,
+    "sha256": "bf4de1417a23ac93451cc22f530d322a5eabd08a87d359524c9da67c679fa231"
+  },
+  {
+    "name": "ref-12-watch-tracker-free",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-12-watch-tracker-free.png",
+    "bytes": 162094,
+    "width": 780,
+    "height": 1688,
+    "sha256": "32a7f8ea7d34fbb4dde4abf3406c69e549f7cf8c7d314b58f954f5f97d027267"
+  },
+  {
+    "name": "ref-13-watch-tracker-pro",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-13-watch-tracker-pro.png",
+    "bytes": 156217,
+    "width": 780,
+    "height": 1688,
+    "sha256": "9d22dc92082d2d5f6b2e9196e54ceff134b830a28011daff4d75d03375dfbb8e"
+  },
+  {
+    "name": "ref-14-paywall-session-6",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-14-paywall-session-6.png",
+    "bytes": 105782,
+    "width": 780,
+    "height": 1688,
+    "sha256": "a3269e6603701a696ab0de44c699cb2238a06f5ac1e6938f5e3c9e48377a112c"
+  },
+  {
+    "name": "ref-15-post-session-title-prompt",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/ref-15-post-session-title-prompt.png",
+    "bytes": 67199,
+    "width": 780,
+    "height": 1688,
+    "sha256": "df4ae0cc5c2fae8c0800c17bea31298ca9990b0478f29165bbfc7348c8462c3a"
+  },
+  {
+    "name": "app-01-landing-create-room",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-01-landing-create-room.png",
+    "bytes": 73057,
+    "width": 780,
+    "height": 1688,
+    "sha256": "b21a186779c70a8b0ddc4c091dbe2b156f70375b4582198f8ae1f31dd9858330"
+  },
+  {
+    "name": "app-02-step1-photo-id",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-02-step1-photo-id.png",
+    "bytes": 176605,
+    "width": 780,
+    "height": 1688,
+    "sha256": "0c7ccf0b1e146823165d789c943373632284689ce8c9108278a8da6d78bc9c97"
+  },
+  {
+    "name": "app-03-photo-bottom-sheet",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-03-photo-bottom-sheet.png",
+    "bytes": 139159,
+    "width": 780,
+    "height": 1688,
+    "sha256": "62e514e071c8277177dfb29bca1bc6c8a6d6956b1211e1e8df55dc488f4a0f13"
+  },
+  {
+    "name": "app-04-manual-step1-category",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-04-manual-step1-category.png",
+    "bytes": 171114,
+    "width": 780,
+    "height": 1688,
+    "sha256": "3066fc065fb65623fc59819bdd4d1ab2787bff32cab0f2724a54d2bf46e1434e"
+  },
+  {
+    "name": "app-05-manual-step2-device-picker",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-05-manual-step2-device-picker.png",
+    "bytes": 130426,
+    "width": 780,
+    "height": 1688,
+    "sha256": "20d938a60312c2f66ee95f06b1f5be7e47ea8c7d1bee1222773b5894f77e71a6"
+  },
+  {
+    "name": "app-06-manual-step3-roku-setup",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-06-manual-step3-roku-setup.png",
+    "bytes": 170829,
+    "width": 780,
+    "height": 1688,
+    "sha256": "a44aecd7d447579abd9c0119e51671fc0cf9b2c734e516854021c3af8b82c753"
+  },
+  {
+    "name": "app-07-countdown-section",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-07-countdown-section.png",
+    "bytes": 188665,
+    "width": 780,
+    "height": 1688,
+    "sha256": "a7e51c79831ed33f4868b14866b8c023b4aa518b567df412f6fbd4cadd430282"
+  },
+  {
+    "name": "app-08-watch-tracker-section",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-08-watch-tracker-section.png",
+    "bytes": 522244,
+    "width": 780,
+    "height": 1688,
+    "sha256": "6a547300caa709790260687c053ae8a048dadf8a20e2cb0cc1a16562a995bcee"
+  },
+  {
+    "name": "app-09-pricing-section",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-09-pricing-section.png",
+    "bytes": 169310,
+    "width": 780,
+    "height": 1688,
+    "sha256": "5a62fff1f95e8ac21adf70c2de97bdb7a296d90c1dfa64b87cc476b0d0d967af"
+  },
+  {
+    "name": "app-10-tonights-list",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-10-tonights-list.png",
+    "bytes": 181878,
+    "width": 780,
+    "height": 1688,
+    "sha256": "ce030add640b889f8211ffae7fb956266b156c44a32109852fae44b01f106305"
+  },
+  {
+    "name": "app-11-browse-service",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/app-11-browse-service.png",
+    "bytes": 162551,
+    "width": 780,
+    "height": 1688,
+    "sha256": "ca9f008d4948436596a85b9dddb7e9ae544b70432bad66aec65e2ba0dbdb15e3"
+  },
+  {
+    "name": "contact-sheet-reference-screens",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/contact-sheet-reference-screens.png",
+    "bytes": 1854980,
+    "width": 2640,
+    "height": 9448,
+    "sha256": "034401d42a6d2030544346c41e41d15817d7a4fdbe79d7f6311674f804749a01"
+  },
+  {
+    "name": "contact-sheet-running-app",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/contact-sheet-running-app.png",
+    "bytes": 2934292,
+    "width": 2640,
+    "height": 7594,
+    "sha256": "46d9923703eaec9e3d0201bcd358d426a307545c32d16e979efb960f98eee586"
+  },
+  {
+    "name": "contact-sheet",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-watchsync-pass2-impeccable-20260509/contact-sheet.png",
+    "bytes": 4773780,
+    "width": 2640,
+    "height": 16864,
+    "sha256": "e8385aa9b861753c02e510c7bbb67669056e323e57445d1b854a512ffa7ce277"
+  }
+]

@@ -1,0 +1,304 @@
+/* Bottom-sheet alignment for the live photo-sheet screen
+   (mirrors reference-screens.css rule for data-demo="03-photo-bottom-sheet"). */
+
+.ref-screen[data-flow-screen="photo-sheet"] .ref-canvas {
+  justify-content: flex-end;
+  padding: 0;
+}
+
+/* AppFlow — supplemental styles for the stateful flow.
+   The bulk of visual primitives come from reference-screens.css (ref-*).
+   These styles only add what's specific to the live flow:
+   back chrome, tracker actions, browse/tonight lists, and the photo toast. */
+
+.flow-chrome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin: 0 0 14px;
+  min-height: 32px;
+}
+
+.flow-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 4px;
+  border: 0;
+  background: transparent;
+  color: var(--ref-text-secondary);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.flow-back:hover {
+  color: var(--ref-text-primary);
+}
+
+.flow-back-arrow {
+  width: 14px;
+  height: 14px;
+}
+
+.flow-room-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 99px;
+  background: var(--ref-bg-elevated);
+  border: 1px solid var(--ref-border);
+  color: var(--ref-text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+}
+
+.flow-room-pill strong {
+  color: var(--ref-text-primary);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.flow-photo-toast {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  border-radius: var(--ref-radius-sm);
+  background: var(--ref-warning-bg);
+  border: 1px solid var(--ref-warning-border);
+  color: var(--ref-warning);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* Make device cards & rows tappable like buttons */
+.flow-tap {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.flow-tap:focus-visible {
+  outline: 2px solid var(--ref-accent);
+  outline-offset: 2px;
+}
+
+/* Connect & test demo controls */
+
+.flow-demo-toggle {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 10.5px;
+  color: var(--ref-text-tertiary);
+}
+
+.flow-demo-toggle button {
+  border: 0;
+  background: transparent;
+  padding: 4px 6px;
+  color: var(--ref-text-tertiary);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+}
+
+.flow-demo-toggle button:hover {
+  color: var(--ref-text-secondary);
+}
+
+/* Tracker actions row */
+
+.flow-tracker-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 4px 0 14px;
+}
+
+.flow-tracker-actions button {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: var(--ref-radius-sm);
+  background: var(--ref-bg-surface);
+  border: 1px solid var(--ref-border);
+  color: var(--ref-text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.flow-tracker-actions button:hover {
+  border-color: var(--ref-accent-border);
+}
+
+.flow-tracker-actions strong {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.flow-tracker-actions span {
+  color: var(--ref-text-tertiary);
+  font-size: 10.5px;
+}
+
+.flow-empty-room {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px dashed rgba(138, 136, 149, 0.34);
+  border-radius: 18px;
+  background: rgba(255, 248, 231, 0.035);
+  color: var(--ref-text-primary);
+  text-align: center;
+}
+
+.flow-empty-room span {
+  font-size: 12.5px;
+  font-weight: 760;
+}
+
+.flow-empty-room small {
+  color: var(--ref-text-secondary);
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+/* Browse / Tonight's list screens */
+
+.flow-list-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.flow-watch-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border-radius: var(--ref-radius-sm);
+  background: var(--ref-bg-surface);
+  border: 1px solid var(--ref-border);
+}
+
+.flow-watch-thumb {
+  width: 44px;
+  height: 60px;
+  border-radius: 6px;
+  background: linear-gradient(150deg, var(--ref-bg-elevated), var(--ref-bg-surface));
+  border: 1px solid var(--ref-border);
+  display: grid;
+  place-items: center;
+  color: var(--ref-text-tertiary);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.flow-watch-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.flow-watch-copy strong {
+  color: var(--ref-text-primary);
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.flow-watch-copy span {
+  color: var(--ref-text-tertiary);
+  font-size: 10.5px;
+}
+
+.flow-watch-add {
+  appearance: none;
+  border: 0;
+  background: var(--ref-accent-tint);
+  color: var(--ref-accent);
+  padding: 6px 10px;
+  border-radius: 99px;
+  border: 1px solid var(--ref-accent-border);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.flow-watch-add.added {
+  background: var(--ref-success-bg);
+  color: var(--ref-success);
+  border-color: var(--ref-success-border);
+}
+
+.flow-empty {
+  margin: 18px 0;
+  padding: 18px 14px;
+  border-radius: var(--ref-radius-sm);
+  background: var(--ref-bg-surface);
+  border: 1px dashed var(--ref-border);
+  text-align: center;
+  color: var(--ref-text-secondary);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* Detected device + photo-detect picker — supplemental */
+
+.ref-beta-pill.warn {
+  color: var(--ref-warning);
+  background: var(--ref-warning-bg);
+  border: 1px solid var(--ref-warning-border);
+}
+
+.ref-result-body.supported {
+  color: var(--ref-text-secondary);
+}
+
+.ref-fire-large-glyph {
+  width: 32px;
+  height: 32px;
+}
+
+/* Reset/dev helper at landing footer */
+
+.flow-landing-helper {
+  margin-top: 18px;
+  text-align: center;
+  color: var(--ref-text-tertiary);
+  font-size: 10.5px;
+}
+
+.flow-landing-helper button {
+  border: 0;
+  background: transparent;
+  color: var(--ref-text-secondary);
+  font-size: 10.5px;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  padding: 0;
+}

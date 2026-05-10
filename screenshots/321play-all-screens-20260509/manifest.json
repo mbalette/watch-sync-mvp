@@ -1,0 +1,54 @@
+[
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/01-welcome-create.png",
+    "label": "Welcome / Create room"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/02-welcome-join.png",
+    "label": "Welcome / Join room"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/03-room-default.png",
+    "label": "Room / default countdown + remote setup"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/04-chat-panel.png",
+    "label": "Chat panel"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/05-find-watch.png",
+    "label": "Find watch / TMDB + filters"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/06-remote-tv-app-method.png",
+    "label": "Remote Start / TV app method choices"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/07-remote-lg-connect.png",
+    "label": "Remote Start / LG connect"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/08-remote-streaming-devices.png",
+    "label": "Remote Start / streaming devices"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/09-remote-fire-connect.png",
+    "label": "Remote Start / Fire Android Google connect"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/10-remote-manual-fallback.png",
+    "label": "Remote Start / manual fallback"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/11-laptop-auto-sync.png",
+    "label": "Laptop auto-sync drawer"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/12-solo-countdown.png",
+    "label": "Solo countdown preview"
+  },
+  {
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/321play-all-screens-20260509/13-play-state.png",
+    "label": "PLAY state"
+  }
+]

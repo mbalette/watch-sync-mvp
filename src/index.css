@@ -1,18 +1,23 @@
 :root {
-  --bg: #0b0809;
-  --bg-soft: #151011;
-  --bg-warm: #1b1414;
-  --cream: #fff2d4;
-  --surface: rgba(255, 248, 231, 0.055);
-  --text: #fff7e8;
-  --text-soft: #eadfce;
-  --muted: #a9978a;
-  --gold: #e6b37c;
-  --coral: #ea877f;
-  --rose: #d4847c;
-  --border: rgba(230, 179, 124, 0.16);
-  --border-soft: rgba(255, 248, 231, 0.08);
-  font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, "Segoe UI", system-ui, sans-serif;
+  --bg: #0A0A0A;
+  --bg-soft: #141414;
+  --bg-warm: #1E1E1E;
+  --cream: #F5F5F3;
+  --surface: rgba(245, 245, 243, 0.055);
+  --text: #F5F5F3;
+  --text-soft: #A0A0A0;
+  --muted: #666666;
+  --gold: #7B5CDB;
+  --coral: #F87171;
+  --rose: #60A5FA;
+  --success: #34D399;
+  --info: #60A5FA;
+  --accent: #7B5CDB;
+  --accent-pressed: #6A4EC5;
+  --accent-disabled: #4A3A7A;
+  --border: #2A2A2A;
+  --border-soft: rgba(245, 245, 243, 0.08);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", system-ui, sans-serif;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -34,10 +39,7 @@ body {
   min-width: 320px;
   min-height: 100svh;
   margin: 0;
-  background:
-    radial-gradient(ellipse 100% 70% at 50% -10%, rgba(230, 179, 124, 0.13), transparent 55%),
-    radial-gradient(ellipse 80% 55% at 100% 100%, rgba(234, 135, 127, 0.10), transparent 50%),
-    linear-gradient(180deg, #120d0e 0%, var(--bg) 42%, #080607 100%);
+  background: linear-gradient(180deg, #141414 0%, var(--bg) 42%, #0A0A0A 100%);
 }
 
 #root {
@@ -55,10 +57,10 @@ p {
 }
 
 a {
-  color: var(--gold);
+  color: var(--info);
 }
 
 ::selection {
-  color: #211311;
-  background: var(--gold);
+  color: #FFFFFF;
+  background: var(--accent);
 }

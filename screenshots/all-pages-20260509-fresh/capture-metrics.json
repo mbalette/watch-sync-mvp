@@ -1,0 +1,54 @@
+{
+  "shots": [
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/01-landing-create-room.png",
+      "label": "Landing / Create room"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/02-landing-enter-code.png",
+      "label": "Landing / Enter code"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/03-room-home.png",
+      "label": "Room home / Remote Start top"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/04-remote-setup-step-1.png",
+      "label": "Remote Start setup / Step 1"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/05-remote-setup-tv-method.png",
+      "label": "Remote Start / TV app method"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/06-remote-setup-roku.png",
+      "label": "Remote Start / Roku setup"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/07-remote-setup-streaming-device.png",
+      "label": "Remote Start / streaming device method"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/08-remote-setup-fire-android-google.png",
+      "label": "Remote Start / Fire Android Google setup"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/09-room-picks.png",
+      "label": "Room Picks / Find next watch"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/10-chat.png",
+      "label": "Chat drawer"
+    },
+    {
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/all-pages-20260509-fresh/11-countdown.png",
+      "label": "Countdown / Play moment"
+    }
+  ],
+  "metrics": {
+    "innerWidth": 390,
+    "docScrollWidth": 390,
+    "bodyScrollWidth": 390,
+    "text": "▶\n321 Play\n\nPress Play together, from anywhere.\n\nYOUR NAME\nCreate a room\n\nAlready invited? Enter a code\n\nConnection is limited. Shared rooms may not sync until the live room reconnects."
+  }
+}

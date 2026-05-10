@@ -1,0 +1,45 @@
+{
+  "scrollY": 2448,
+  "activeEarly": [
+    "?Console / cable / not sure"
+  ],
+  "step2": {
+    "top": 54,
+    "bottom": 283,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 229,
+    "text": "Step 2Which device is it?Tap the closest match. Nothing connects until you choose one and save/test it.Apple TV / not sureNo direct Remote Start claim yet. Use manual countdown tonight.Manual-only"
+  },
+  "step3": {
+    "top": 295,
+    "bottom": 436,
+    "left": 29,
+    "right": 361,
+    "width": 332,
+    "height": 140,
+    "text": "Step 3 · Connect itNo device selected yetPick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that."
+  },
+  "drawer": {
+    "top": -659,
+    "bottom": 664,
+    "left": 16,
+    "right": 374,
+    "width": 358,
+    "height": 1323,
+    "text": "Remote Start is local device control at countdown GO. Everyone still opens the title themselves in their own streaming app, pauses at the sync point, readies up, and uses manual countdown as the universal fallback. If enabled below, Watch Sync sends one local "
+  },
+  "visibleTexts": [
+    "Good. Manual countdown works tonight. Remote Start only appears when a safe local Play path exists.",
+    "Which device is it?",
+    "Tap the closest match. Nothing connects until you choose one and save/test it.",
+    "Apple TV / not sureNo direct Remote Start claim yet. Use manual countdown tonight.Manual-only",
+    "No device selected yet",
+    "Pick how you are watching, then pick the exact TV/streaming device. The connection steps and buttons will appear after that.",
+    "Pairing tokens and Home Assistant webhook URLs stay in this browser/helper config, not the room backend. Watch Sync servers do not store HA credentials or entity IDs. Helper calls ",
+    "Laptop auto-syncSupported browser tabs only",
+    "Connection is limited. Shared rooms may not sync until the live room reconnects."
+  ],
+  "linkedDeviceStorage": null
+}

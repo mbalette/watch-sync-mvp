@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8" />
+<style>
+  body { background:#0A0A0E; color:#EDEAE5;
+    font-family:-apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    margin:0; padding:24px; }
+  h1 { font-size: 18px; font-weight: 700; letter-spacing:-0.01em; margin:0 0 6px; }
+  p.note { color:#8A8895; font-size:12px; margin:0 0 22px; }
+  .grid { display:grid; grid-template-columns: repeat(5, 1fr); gap:18px; }
+  figure { margin:0; background:#111118; border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px; padding:8px; }
+  figure img { display:block; width:100%; height:auto; border-radius:8px; }
+  figcaption { color:#8A8895; font-size:10.5px; margin:8px 4px 4px;
+    letter-spacing:0.02em; line-height:1.4; }
+  figcaption strong { color:#EDEAE5; font-weight:700; display:block; margin-bottom:2px; }
+</style></head><body>
+<h1>Watch Sync — Stateful flow click-through (20 screens)</h1>
+<p class="note">Captured by walking the real app via Playwright clicks (not ?demo= routes). Each frame's data-flow-screen attribute is logged in _state-progression.txt.</p>
+<div class="grid">
+<figure><img src="01-landing-initial.png" alt="landing-initial" /><figcaption><strong>01</strong>landing-initial</figcaption></figure>
+<figure><img src="02-step1-photo.png" alt="step1-photo" /><figcaption><strong>02</strong>step1-photo</figcaption></figure>
+<figure><img src="03-photo-bottom-sheet.png" alt="photo-bottom-sheet" /><figcaption><strong>03</strong>photo-bottom-sheet</figcaption></figure>
+<figure><img src="04-step1-category-empty.png" alt="step1-category-empty" /><figcaption><strong>04</strong>step1-category-empty</figcaption></figure>
+<figure><img src="05-step1-category-selected.png" alt="step1-category-selected" /><figcaption><strong>05</strong>step1-category-selected</figcaption></figure>
+<figure><img src="06-step2-device-picker.png" alt="step2-device-picker" /><figcaption><strong>06</strong>step2-device-picker</figcaption></figure>
+<figure><img src="07-step2-device-selected-lg.png" alt="step2-device-selected-lg" /><figcaption><strong>07</strong>step2-device-selected-lg</figcaption></figure>
+<figure><img src="08-step2-roku-reselected.png" alt="step2-roku-reselected" /><figcaption><strong>08</strong>step2-roku-reselected</figcaption></figure>
+<figure><img src="09-step3-roku-setup.png" alt="step3-roku-setup" /><figcaption><strong>09</strong>step3-roku-setup</figcaption></figure>
+<figure><img src="10-result-success.png" alt="result-success" /><figcaption><strong>10</strong>result-success</figcaption></figure>
+<figure><img src="11-countdown-auto.png" alt="countdown-auto" /><figcaption><strong>11</strong>countdown-auto</figcaption></figure>
+<figure><img src="12-post-title-prompt.png" alt="post-title-prompt" /><figcaption><strong>12</strong>post-title-prompt</figcaption></figure>
+<figure><img src="13-tracker-titled.png" alt="tracker-titled" /><figcaption><strong>13</strong>tracker-titled</figcaption></figure>
+<figure><img src="14-paywall.png" alt="paywall" /><figcaption><strong>14</strong>paywall</figcaption></figure>
+<figure><img src="15-browse-find-watch.png" alt="browse-find-watch" /><figcaption><strong>15</strong>browse-find-watch</figcaption></figure>
+<figure><img src="16-browse-two-added.png" alt="browse-two-added" /><figcaption><strong>16</strong>browse-two-added</figcaption></figure>
+<figure><img src="17-tonights-list.png" alt="tonights-list" /><figcaption><strong>17</strong>tonights-list</figcaption></figure>
+<figure><img src="18-result-failed.png" alt="result-failed" /><figcaption><strong>18</strong>result-failed</figcaption></figure>
+<figure><img src="19-countdown-manual.png" alt="countdown-manual" /><figcaption><strong>19</strong>countdown-manual</figcaption></figure>
+<figure><img src="20-apple-tv-steer.png" alt="apple-tv-steer" /><figcaption><strong>20</strong>apple-tv-steer</figcaption></figure>
+</div>
+</body></html>

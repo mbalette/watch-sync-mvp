@@ -1,0 +1,10 @@
+01-landing-blank-name-new-copy.png screen=landing selected=- detected=- 77931B sha256=edfda793d923b49c3e66147699f8c9493958198655812598270a744589c480cf // Landing: 3-2-1 Play / Watch Together / blank name / From Anywhere non-italic via CSS
+02-console-manual-no-apple.png screen=manual-unsupported selected=- detected=- 86731B sha256=6c376cdbe9ff5092a1c3fd45cf82ceeb640436fc70e8183177269379109442ac // Console/cable/other: manual-only, not Apple TV detected
+03-setup-roku.png screen=device-setup selected=roku detected=- 135702B sha256=d79716ac51778d176f366baf2a7c8e2a6a74e04c1d2d0a7388e96635bf1e9da2 // select-device-roku setup instructions
+04-setup-fire-adb.png screen=device-setup selected=fire detected=- 132154B sha256=184ddbb3db6d23f176efba04bbe6ee5739c7e84392252679ad22b8a5873d3383 // select-device-fire setup instructions
+05-setup-google-adb.png screen=device-setup selected=google detected=- 143587B sha256=9769359be0ceb655286e4e97816d3a4dfaa576e08f59c84c88ce69e795e319bd // select-device-google setup instructions
+06-setup-lg-webos.png screen=device-setup selected=lg detected=- 135275B sha256=dd38ca81286b6ee382509dcd349aa0069a892f138926c08801fdc495f634e379 // select-device-lg setup instructions
+07-setup-samsung-token.png screen=device-setup selected=samsung detected=- 140831B sha256=28148838a21795fc53eecf585f37bc899468ce2247fc4f6dc6dd3a0f9c7b019e // select-device-samsung setup instructions
+08-setup-vizio-pin.png screen=device-setup selected=vizio detected=- 119600B sha256=f713245a469d7be1d2abc794ee4f6c2850cb7f1c6d1655b06f8023d8bd8b8576 // select-device-vizio setup instructions
+09-setup-sony-bravia.png screen=device-setup selected=sony detected=- 135731B sha256=7852da9058dab33ebb9d9a44062a139987f55160295b0534a5d496fe9c5923ba // select-device-sony setup instructions
+10-countdown-empty-room.png screen=countdown-auto selected=roku detected=- 50310B sha256=ca2bfb667ac4ad326d0af61fc3c89d88896e58072046c2c872f1c89e4fd7e0e6 // Countdown: no Alex/Meredith chips; empty-room state

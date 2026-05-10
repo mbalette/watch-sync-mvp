@@ -1,0 +1,97 @@
+{
+  "baseUrl": "http://127.0.0.1:5174/",
+  "shots": [
+    {
+      "label": "Section 1 Step 1 top card",
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/jose-camera-device-id-20260509/section-1-step-1-room-top.png",
+      "bodyText": "▶\n321 Play\nANY TV\nYU9G5D\nROOM CODE\nPRIVATE LOCAL ROOM\n0 OF 2 READY\nSTEP 1\nWhat do you watch on?\n📷\nTake a photo of your TV or remote — we’ll figure it out\nChoose from camera roll\nPhoto is used to identify your device only. Not saved.\n\nor pick manually:\n\nTV\nTV app built into my TV\n▭\nStreaming stick or box\n?\nConsole / cable / other\n\nBOTH PAUSE AT\n\n00:00\n\nBoth of you: open your show and pause it.\n\nAlex (you)\nWaiting for partner\nI'm ready\nStart without partner\n\nPreview only — movie night starts when both partners are ready.\n\nINVITE\n\nSend the room code, then both get ready.\nCopy invite\n\nPAUSE AT\n\nBoth pause your video at this timestamp.\nSet\nChat\nSync\nTime\nFind watch\nSet up Auto Play\nPick watch method first\n\nWATCH TRACKER\n\nYour time together, remembered automatically.\n\nWe save the night, time, partner, device, and play mode. Add the title later only if you want richer recaps.\n\nYear in Sync\n1\nwatch nights\n0\ncountdowns\nMeredith\ntop partner\nManual\nplay mode\nYEAR IN SYNC\n3 watch nights\nTop partner: Meredith\nUpgrade to Pro to unlock your full watch history.\nYour nights are already being saved. Pro reveals shared history, watch-with stats, streaks, and Year in Sync.\nSee what's in Pro\nUntitled watch\nThis watch night is saved automatically. Titles are optional — add one for show, genre, and service stats.\nADD TITLE ANYTIME\nSave to history\nNot now\n\nWHAT'S ON TONIGHT\n\nTonight's list\n0 picks\n\nAdd a few picks. Your partner adds theirs. Vote on what to watch.\n\nBrowse by streaming service\nSearch for a title\nSet up Auto Play\nWhat are you watching on?\n\nOne-time setup. After this, we press Play f",
+      "proof": {
+        "photoHeroText": "📷Take a photo of your TV or remote — we’ll figure it out",
+        "manualFallbackText": "TVTV app built into my TV▭Streaming stick or box?Console / cable / other",
+        "photoHeroRect": {
+          "top": 228,
+          "left": 35,
+          "width": 320,
+          "height": 96,
+          "bottom": 324
+        },
+        "manualFallbackRect": {
+          "top": 402,
+          "left": 35,
+          "width": 320,
+          "height": 160,
+          "bottom": 562
+        },
+        "fileInputs": [
+          {
+            "accept": "image/*",
+            "capture": "environment",
+            "ariaLabel": "Take a photo of your TV or remote"
+          },
+          {
+            "accept": "image/*",
+            "capture": null,
+            "ariaLabel": "Choose from camera roll or upload a device photo"
+          },
+          {
+            "accept": "image/*",
+            "capture": "environment",
+            "ariaLabel": "Take a photo of your TV or remote"
+          },
+          {
+            "accept": "image/*",
+            "capture": null,
+            "ariaLabel": "Choose from camera roll or upload a device photo"
+          }
+        ],
+        "linkedDeviceStorage": null
+      }
+    },
+    {
+      "label": "Section 1 Step 1 drawer",
+      "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/jose-camera-device-id-20260509/section-1-step-1-drawer.png",
+      "bodyText": "▶\n321 Play\nANY TV\nYU9G5D\nROOM CODE\nPRIVATE LOCAL ROOM\n0 OF 2 READY\nSTEP 1\nWhat do you watch on?\n📷\nTake a photo of your TV or remote — we’ll figure it out\nChoose from camera roll\nPhoto is used to identify your device only. Not saved.\n\nor pick manually:\n\nTV\nTV app built into my TV\n▭\nStreaming stick or box\n?\nConsole / cable / other\n\nBOTH PAUSE AT\n\n00:00\n\nBoth of you: open your show and pause it.\n\nAlex (you)\nWaiting for partner\nI'm ready\nStart without partner\n\nPreview only — movie night starts when both partners are ready.\n\nINVITE\n\nSend the room code, then both get ready.\nCopy invite\n\nPAUSE AT\n\nBoth pause your video at this timestamp.\nSet\nChat\nSync\nTime\nFind watch\nSet up Auto Play\nPick watch method first\n\nWATCH TRACKER\n\nYour time together, remembered automatically.\n\nWe save the night, time, partner, device, and play mode. Add the title later only if you want richer recaps.\n\nYear in Sync\n1\nwatch nights\n0\ncountdowns\nMeredith\ntop partner\nManual\nplay mode\nYEAR IN SYNC\n3 watch nights\nTop partner: Meredith\nUpgrade to Pro to unlock your full watch history.\nYour nights are already being saved. Pro reveals shared history, watch-with stats, streaks, and Year in Sync.\nSee what's in Pro\nUntitled watch\nThis watch night is saved automatically. Titles are optional — add one for show, genre, and service stats.\nADD TITLE ANYTIME\nSave to history\nNot now\n\nWHAT'S ON TONIGHT\n\nTonight's list\n0 picks\n\nAdd a few picks. Your partner adds theirs. Vote on what to watch.\n\nBrowse by streaming service\nSearch for a title\nSet up Auto Play\nWhat are you watching on?\n\nOne-time setup. After this, we press Play f",
+      "proof": {
+        "photoHeroText": "📷Take a photo of your TV or remote — we’ll figure it out",
+        "manualFallbackText": "TVTV app built into my TVYour TV's built-in streaming apps.▭Streaming stick or boxRoku, Fire TV, Android TV, Google TV, etc.?Console / cable / otherDon’t see yours? More devices coming soon.",
+        "photoHeroRect": {
+          "top": 430,
+          "left": 48,
+          "width": 294,
+          "height": 88,
+          "bottom": 518
+        },
+        "manualFallbackRect": {
+          "top": 607,
+          "left": 48,
+          "width": 294,
+          "height": 222,
+          "bottom": 829
+        },
+        "fileInputs": [
+          {
+            "accept": "image/*",
+            "capture": "environment",
+            "ariaLabel": "Take a photo of your TV or remote"
+          },
+          {
+            "accept": "image/*",
+            "capture": null,
+            "ariaLabel": "Choose from camera roll or upload a device photo"
+          },
+          {
+            "accept": "image/*",
+            "capture": "environment",
+            "ariaLabel": "Take a photo of your TV or remote"
+          },
+          {
+            "accept": "image/*",
+            "capture": null,
+            "ariaLabel": "Choose from camera roll or upload a device photo"
+          }
+        ],
+        "linkedDeviceStorage": null
+      }
+    }
+  ]
+}

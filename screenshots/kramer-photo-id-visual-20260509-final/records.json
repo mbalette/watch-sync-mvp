@@ -1,0 +1,52 @@
+[
+  {
+    "name": "01-auto-play-step1-photo-id",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-photo-id-visual-20260509-final/01-auto-play-step1-photo-id.png",
+    "sha256": "8cc1fcfdbaf46c467000bc4fc925aec82212fb404be7c295f86ce5eaf07c3d84",
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "bytes": 191213
+  },
+  {
+    "name": "01b-auto-play-step1-photo-id-card-aligned",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-photo-id-visual-20260509-final/01b-auto-play-step1-photo-id-card-aligned.png",
+    "sha256": "5f4676aa1e9be0c63a58c6326f954083badb9b6f49bd4a13314ed85122a9435d",
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "bytes": 183586
+  },
+  {
+    "name": "02-photo-bottom-sheet",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-photo-id-visual-20260509-final/02-photo-bottom-sheet.png",
+    "sha256": "d2ca28f43c0ffb2bcdc6fecab164ee0745968b1c7b3e998a6de3dc57d1894593",
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "bytes": 139056
+  },
+  {
+    "name": "03-drawer-step1-after-method-pick",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-photo-id-visual-20260509-final/03-drawer-step1-after-method-pick.png",
+    "sha256": "7097370be2b856e6428cd5881ba7481bfedf19f8b7f7331460a1ba944057277a",
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "bytes": 179699
+  },
+  {
+    "name": "04-drawer-step2-device-picker",
+    "file": "/Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/screenshots/kramer-photo-id-visual-20260509-final/04-drawer-step2-device-picker.png",
+    "sha256": "31c324d6cd7caa2e0e61e4eae07d0c10aac9eddcf7da8c3b393489633694d737",
+    "viewport": {
+      "w": 390,
+      "h": 844
+    },
+    "bytes": 130432
+  }
+]

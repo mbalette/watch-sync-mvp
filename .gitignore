@@ -23,3 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 docs/screenshots/live-internal-runtime-beta/
+
+# Local Wrangler/Miniflare state
+.wrangler/
