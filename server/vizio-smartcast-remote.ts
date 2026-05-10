@@ -9,11 +9,13 @@ export interface VizioSmartCastOptions {
   authToken?: string;
   timeoutMs?: number;
   pairingToken?: string;
+  challengeType?: string;
   deviceId?: string;
 }
 
 export interface VizioPairStartResult {
   pairingToken?: string;
+  challengeType?: string;
   raw?: unknown;
 }
 
@@ -61,7 +63,7 @@ export async function startVizioPairing(
     `${vizioSmartCastBaseUrl(hostInput, options)}/pairing/start`,
     {
       DEVICE_ID: options.deviceId ?? "watch-sync-helper",
-      DEVICE_NAME: "Watch Sync",
+      DEVICE_NAME: "321 Play",
     },
     options,
   );
@@ -69,6 +71,9 @@ export async function startVizioPairing(
     pairingToken:
       stringFromNested(response, ["ITEM", "PAIRING_REQ_TOKEN"]) ??
       stringFromNested(response, ["PAIRING_REQ_TOKEN"]),
+    challengeType:
+      stringFromNested(response, ["ITEM", "CHALLENGE_TYPE"]) ??
+      stringFromNested(response, ["CHALLENGE_TYPE"]),
     raw: response,
   };
 }
@@ -82,9 +87,9 @@ export async function confirmVizioPairing(
     `${vizioSmartCastBaseUrl(hostInput, options)}/pairing/pair`,
     {
       DEVICE_ID: options.deviceId ?? "watch-sync-helper",
-      CHALLENGE_TYPE: 1,
+      CHALLENGE_TYPE: numberOrStringFrom(options.challengeType ?? "1"),
       RESPONSE_VALUE: code,
-      PAIRING_REQ_TOKEN: options.pairingToken,
+      PAIRING_REQ_TOKEN: numberOrStringFrom(options.pairingToken),
     },
     options,
   );
@@ -158,7 +163,11 @@ async function jsonPutForResult(
             );
             return;
           }
-          resolve(parseMaybeJson(responseBody));
+          try {
+            resolve(assertVizioStatusSuccess(parseMaybeJson(responseBody)));
+          } catch (error) {
+            reject(error);
+          }
         });
       },
     );
@@ -172,6 +181,14 @@ async function jsonPutForResult(
 
 function shouldVerifyVizioTls(host: string): boolean {
   return !isPrivateLanHost(host);
+}
+
+function numberOrStringFrom(value: string | undefined): number | string | undefined {
+  if (value === undefined) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  if (/^-?\d+$/.test(trimmed)) return Number(trimmed);
+  return trimmed;
 }
 
 function isPrivateLanHost(host: string): boolean {
@@ -197,6 +214,15 @@ function parseMaybeJson(text: string): unknown {
   }
 }
 
+function assertVizioStatusSuccess(value: unknown): unknown {
+  const result = stringFromNested(value, ["STATUS", "RESULT"]);
+  if (!result || result.toUpperCase() === "SUCCESS") return value;
+  const detail = stringFromNested(value, ["STATUS", "DETAIL"]);
+  throw new Error(
+    `VIZIO TV returned ${result}${detail ? `: ${detail}` : ""}`,
+  );
+}
+
 function stringFromNested(value: unknown, path: string[]): string | undefined {
   let current: unknown = value;
   for (const key of path) {
@@ -204,5 +230,7 @@ function stringFromNested(value: unknown, path: string[]): string | undefined {
       return undefined;
     current = (current as Record<string, unknown>)[key];
   }
-  return typeof current === "string" ? current : undefined;
+  if (typeof current === "string") return current;
+  if (typeof current === "number" && Number.isFinite(current)) return String(current);
+  return undefined;
 }

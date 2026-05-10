@@ -75,7 +75,11 @@ describe("Vizio SmartCast experimental remote adapter", () => {
       requests.push({ path: req.url, body });
       res.writeHead(200, { "Content-Type": "application/json" });
       if (req.url === "/pairing/start")
-        res.end(JSON.stringify({ ITEM: { PAIRING_REQ_TOKEN: "pair-token" } }));
+        res.end(
+          JSON.stringify({
+            ITEM: { CHALLENGE_TYPE: 1, PAIRING_REQ_TOKEN: 123456 },
+          }),
+        );
       else res.end(JSON.stringify({ ITEM: { AUTH_TOKEN: "auth-token" } }));
     });
 
@@ -84,11 +88,15 @@ describe("Vizio SmartCast experimental remote adapter", () => {
         url: baseUrl,
         deviceId: "watch-sync-test",
       }),
-    ).resolves.toMatchObject({ pairingToken: "pair-token" });
+    ).resolves.toMatchObject({
+      challengeType: "1",
+      pairingToken: "123456",
+    });
     await expect(
       confirmVizioPairing("127.0.0.1", "1234", {
         url: baseUrl,
-        pairingToken: "pair-token",
+        pairingToken: "123456",
+        challengeType: "1",
         deviceId: "watch-sync-test",
       }),
     ).resolves.toMatchObject({ authToken: "auth-token" });
@@ -98,7 +106,7 @@ describe("Vizio SmartCast experimental remote adapter", () => {
         path: "/pairing/start",
         body: JSON.stringify({
           DEVICE_ID: "watch-sync-test",
-          DEVICE_NAME: "Watch Sync",
+          DEVICE_NAME: "321 Play",
         }),
       },
       {
@@ -107,7 +115,7 @@ describe("Vizio SmartCast experimental remote adapter", () => {
           DEVICE_ID: "watch-sync-test",
           CHALLENGE_TYPE: 1,
           RESPONSE_VALUE: "1234",
-          PAIRING_REQ_TOKEN: "pair-token",
+          PAIRING_REQ_TOKEN: 123456,
         }),
       },
     ]);

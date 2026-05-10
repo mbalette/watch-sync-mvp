@@ -61,6 +61,21 @@ describe('room reducer/event model', () => {
     expect(isRoomEvent({ type: 'smart_tv_auto_pause', actorId: 'person_1', at: nowIso() })).toBe(false)
   })
 
+  it('accepts countdown_go timing-only events and rejects TV credential fields', () => {
+    const host = createParticipant('Host', 'host')
+    const room = createRoom(host)
+    const event: RoomEvent = { type: 'countdown_go', countdownId: 'c_123', playAtServerMs: Date.now() + 3000, at: nowIso() }
+
+    expect(isRoomEvent(event)).toBe(true)
+    expect(isRoomEvent({ ...event, host: '192.168.1.23' })).toBe(false)
+    expect(isRoomEvent({ ...event, token: 'secret-token' })).toBe(false)
+    expect(isRoomEvent({ ...event, webhookUrl: 'http://homeassistant.local/api/webhook/secret' })).toBe(false)
+
+    const updated = applyRoomEvent(room, event)
+    expect(updated.countdownState.phase).toBe('play')
+    expect(updated.lastSignal?.message).toContain('no TV secrets')
+  })
+
   it('accepts chat messages as actor-owned manual coordination events', () => {
     const host = createParticipant('Host', 'host')
     const room = createRoom(host)

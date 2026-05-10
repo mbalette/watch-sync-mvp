@@ -9,7 +9,7 @@ import {
 export type { RemoteStartOutcomeEvent, RemoteStartOutcomeType };
 export { REMOTE_START_OUTCOME_FORBIDDEN_KEYS, REMOTE_START_OUTCOME_SAFE_KEYS, sanitizeRemoteStartOutcome };
 
-export function logRemoteStartOutcome(input: RemoteStartOutcomeEvent): void {
+export function logRemoteStartOutcome(input: Partial<RemoteStartOutcomeEvent> & { type: RemoteStartOutcomeType }): void {
   const event = sanitizeRemoteStartOutcome(input as unknown as Record<string, unknown>);
   if (typeof navigator !== "undefined" && navigator.sendBeacon) {
     const blob = new Blob([JSON.stringify(event)], {

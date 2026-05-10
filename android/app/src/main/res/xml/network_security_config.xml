@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Native LAN TV adapters may need cleartext HTTP for local IPs (e.g. Roku ECP on :8060). Keep this scoped to local/private addresses where Android supports config matching; do not use for secrets or backend traffic. -->
+    <base-config cleartextTrafficPermitted="false" />
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">localhost</domain>
+    </domain-config>
+</network-security-config>

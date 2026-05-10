@@ -1,0 +1,17 @@
+Archive:  /Users/home/Desktop/kyrosworkspace/projects/watch-sync-mvp/artifacts/remote-start-nonhardware/321play-native-tvremote-nonhardware-readiness-20260510-014527.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/
+     1258  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/diff-stat.txt
+    44707  05-10-2026 01:41   321play-native-tvremote-nonhardware-readiness-20260510-014527/verification-output.txt
+      168  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/independent-code-review.txt
+     1743  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/git-status.txt
+     4290  05-10-2026 01:24   321play-native-tvremote-nonhardware-readiness-20260510-014527/baseline-output.txt
+      547  05-10-2026 01:40   321play-native-tvremote-nonhardware-readiness-20260510-014527/simulator-matrix.md
+     7464  05-10-2026 01:29   321play-native-tvremote-nonhardware-readiness-20260510-014527/android-build-output.txt
+    80126  05-10-2026 01:40   321play-native-tvremote-nonhardware-readiness-20260510-014527/simulator-matrix.json
+      323  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/final-receipt-copy.md
+      240  05-10-2026 01:40   321play-native-tvremote-nonhardware-readiness-20260510-014527/outcome-sample.json
+     1608  05-10-2026 01:45   321play-native-tvremote-nonhardware-readiness-20260510-014527/proof-table.md
+---------                     -------
+   142474                     12 files

@@ -1,0 +1,11 @@
+{
+  "type": "go_sent",
+  "platform": "roku",
+  "deviceType": "roku_tv",
+  "adapterFamily": "roku",
+  "source": "synthetic",
+  "latencyMs": 37,
+  "goResult": "sent",
+  "hardwareValidation": false,
+  "timestamp": "2026-05-10T07:00:42.267Z"
+}

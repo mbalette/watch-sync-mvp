@@ -27,6 +27,7 @@ type AppScreen =
   | "photo-detect-picker"
   | "step2-device"
   | "device-setup"
+  | "test-confirm"
   | "result-success"
   | "result-fail"
   | "detected-device"
@@ -311,27 +312,27 @@ const SETUP_GUIDES: Record<DeviceId, SetupGuide> = {
     ],
   },
   vizio: {
-    eyebrow: "VIZIO setup",
-    title: "Pair SmartCast",
-    sub: "PIN pairing + local auth token.",
-    primaryAction: "Pair VIZIO",
+    eyebrow: "VIZIO TV setup",
+    title: "Pair your VIZIO TV",
+    sub: "Pair with TV code, then send one Test Play.",
+    primaryAction: "Find my VIZIO TV",
     failureHint:
-      "Use the VIZIO pairing PIN and keep the SmartCast auth token local to this helper.",
+      "If pairing or Test Play fails, use manual countdown tonight and try pairing again later.",
     steps: [
       {
-        title: "Start SmartCast pairing",
-        body: "The TV shows a PIN when the local helper starts pairing.",
+        title: "Start pairing",
+        body: "Your VIZIO should show a short code when setup starts.",
       },
       {
-        title: "Enter PIN",
-        body: "Enter the PIN once; the helper stores the local token only on this device.",
-        inputLabel: "VIZIO PIN / host",
-        inputValue: "1234 · vizio.local",
+        title: "Enter the code from your TV",
+        body: "Type the code once. 3-2-1 Play saves this VIZIO only on this browser/device.",
+        inputLabel: "Code shown on TV",
+        inputValue: "1234",
       },
       {
-        title: "Test Play command",
-        body: "The helper sends the SmartCast play key envelope after pairing.",
-        helperAction: "Pair / test VIZIO",
+        title: "Send Test Play",
+        body: "Open the movie on your VIZIO, pause it, then send one Play command.",
+        helperAction: "Send Test Play",
       },
     ],
   },
@@ -430,7 +431,7 @@ const DETECTED_DEVICES: Record<DetectedDeviceId, DetectedDevice> = {
     support: "beta",
     body:
       "Auto Play supports VIZIO TVs in beta.\n" +
-      "SmartCast pairing PIN on first connect.",
+      "Pair with a TV code on first connect.",
     glyph: "tv",
   },
   sony: {
@@ -813,6 +814,47 @@ function detectedGlyphFor(kind: DetectedDevice["glyph"]) {
   }
 }
 
+const TV_REMOTE_HELPER_URL = "http://127.0.0.1:8790";
+
+type VizioHelperResponse = {
+  ok?: boolean;
+  error?: string;
+  pairingToken?: string;
+  challengeType?: string;
+  authToken?: string;
+};
+
+async function postTvRemoteHelper(
+  path: string,
+  body: Record<string, string>,
+): Promise<VizioHelperResponse> {
+  const response = await fetch(`${TV_REMOTE_HELPER_URL}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const payload = (await response.json().catch(() => ({}))) as VizioHelperResponse;
+  if (!response.ok || payload.ok === false) {
+    throw new Error(payload.error || `TV helper returned HTTP ${response.status}`);
+  }
+  return payload;
+}
+
+function friendlyTvHelperError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  if (/Failed to fetch/i.test(message)) {
+    return "The browser blocked this local TV setup. For this beta, open 3-2-1 Play from localhost on the Mac running the TV helper, then pair your VIZIO there.";
+  }
+  return message;
+}
+
+function canUseBrowserTvHelper(): boolean {
+  return (
+    window.location.hostname === "localhost" ||
+    window.location.hostname === "127.0.0.1"
+  );
+}
+
 export function AppFlow() {
   const [screen, setScreen] = useState<AppScreen>("landing");
   const [room, setRoom] = useState<RoomState | null>(null);
@@ -826,6 +868,15 @@ export function AppFlow() {
   const [photoToast, setPhotoToast] = useState("");
   const [countdownText, setCountdownText] = useState("3");
   const [tonights, setTonights] = useState<string[]>([]);
+  const [vizioHost, setVizioHost] = useState("");
+  const [vizioPin, setVizioPin] = useState("");
+  const [vizioPairingToken, setVizioPairingToken] = useState("");
+  const [vizioChallengeType, setVizioChallengeType] = useState("");
+  const [vizioAuthToken, setVizioAuthToken] = useState("");
+  const [vizioStatus, setVizioStatus] = useState("");
+  const [vizioBusy, setVizioBusy] = useState<
+    "start" | "confirm" | "test" | null
+  >(null);
 
   const roomCode = room?.roomId;
 
@@ -917,6 +968,89 @@ export function AppFlow() {
     );
   }
 
+  async function startVizioPairingFromSite() {
+    const host = vizioHost.trim();
+    if (!host) {
+      setVizioStatus("Enter your VIZIO TV IP address first.");
+      return;
+    }
+    if (!canUseBrowserTvHelper()) {
+      setVizioStatus(
+        "For this beta, VIZIO pairing opens from the local setup page on the Mac running the TV helper. Start the helper, then open http://127.0.0.1:5173/ in this browser.",
+      );
+      return;
+    }
+    setVizioBusy("start");
+    setVizioStatus("Starting VIZIO pairing… watch the TV for a code.");
+    setVizioPairingToken("");
+    setVizioChallengeType("");
+    setVizioAuthToken("");
+    try {
+      const result = await postTvRemoteHelper("/vizio/pair/start", { host });
+      if (!result.pairingToken) {
+        throw new Error("The TV did not return a pairing token.");
+      }
+      setVizioPairingToken(result.pairingToken);
+      setVizioChallengeType(result.challengeType ?? "1");
+      setVizioStatus("Pairing started. Enter the code shown on the TV.");
+    } catch (error) {
+      setVizioStatus(friendlyTvHelperError(error));
+    } finally {
+      setVizioBusy(null);
+    }
+  }
+
+  async function confirmVizioPairingFromSite() {
+    const host = vizioHost.trim();
+    const code = vizioPin.trim();
+    if (!host || !code || !vizioPairingToken) {
+      setVizioStatus("Start pairing first, then enter the PIN from the TV.");
+      return;
+    }
+    setVizioBusy("confirm");
+    setVizioStatus("Confirming VIZIO pairing…");
+    try {
+      const result = await postTvRemoteHelper("/vizio/pair/confirm", {
+        host,
+        code,
+        pairingToken: vizioPairingToken,
+        challengeType: vizioChallengeType || "1",
+      });
+      if (!result.authToken) {
+        throw new Error("The TV did not return a saved auth token.");
+      }
+      setVizioAuthToken(result.authToken);
+      setVizioStatus("VIZIO paired. Open your movie, pause it, then send Test Play.");
+    } catch (error) {
+      setVizioStatus(friendlyTvHelperError(error));
+    } finally {
+      setVizioBusy(null);
+    }
+  }
+
+  async function testVizioPlayFromSite() {
+    const host = vizioHost.trim();
+    if (!host || !vizioAuthToken) {
+      setVizioStatus("Pair the TV first so we have the local auth token.");
+      return;
+    }
+    setVizioBusy("test");
+    setVizioStatus("Sending one VIZIO Play command…");
+    try {
+      await postTvRemoteHelper("/vizio/keypress", {
+        host,
+        authToken: vizioAuthToken,
+        key: "play",
+      });
+      setVizioStatus("Test Play sent. Did the movie start? If yes, pause it again before continuing.");
+      setScreen("test-confirm");
+    } catch (error) {
+      setVizioStatus(friendlyTvHelperError(error));
+    } finally {
+      setVizioBusy(null);
+    }
+  }
+
   // From a detected device's "Set up Auto Play" CTA, route to device-setup
   // pre-selected with the matching DeviceId. Apple TV / unknown have no
   // matching DeviceId, so they steer to manual instead (handled per-screen).
@@ -942,6 +1076,7 @@ export function AppFlow() {
       data-selected-device={device ?? undefined}
       data-variant={
         screen === "landing" ||
+        screen === "test-confirm" ||
         screen === "result-success" ||
         screen === "result-fail" ||
         screen === "detected-device" ||
@@ -1206,24 +1341,109 @@ export function AppFlow() {
                     />
                   </div>
                 )}
-                {step.helperAction && (
+                {step.helperAction && setupDevice !== "vizio" && (
                   <button type="button" className="ref-find-auto">
                     {step.helperAction}
                   </button>
                 )}
               </div>
             ))}
+            {setupDevice === "vizio" && (
+              <div className="ref-numbered-card" data-vizio-live-pairing="true">
+                <span className="ref-numbered-tag">Local setup beta</span>
+                <strong>Pair from local setup</strong>
+                <p>
+                  Public HTTPS browsers can block TV pairing. For this beta, run
+                  the helper on this Mac and open the local setup page at
+                  http://127.0.0.1:5173/.
+                </p>
+                <label className="ref-input-label" htmlFor="vizio-host-input">
+                  VIZIO TV IP address
+                </label>
+                <div className="ref-input">
+                  <input
+                    id="vizio-host-input"
+                    value={vizioHost}
+                    onChange={(event) => setVizioHost(event.currentTarget.value)}
+                    placeholder="10.0.0.22"
+                    inputMode="decimal"
+                    autoComplete="off"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="ref-find-auto"
+                  onClick={startVizioPairingFromSite}
+                  disabled={vizioBusy !== null}
+                >
+                  {vizioBusy === "start" ? "Starting…" : "Start pairing"}
+                </button>
+                {vizioPairingToken && (
+                  <p className="ref-helper-note">
+                    Pairing started. Now enter the code shown on your TV.
+                  </p>
+                )}
+                <label className="ref-input-label" htmlFor="vizio-pin-input">
+                  Code shown on TV
+                </label>
+                <div className="ref-input">
+                  <input
+                    id="vizio-pin-input"
+                    value={vizioPin}
+                    onChange={(event) => setVizioPin(event.currentTarget.value)}
+                    placeholder="1234"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="ref-find-auto"
+                  onClick={confirmVizioPairingFromSite}
+                  disabled={vizioBusy !== null || !vizioPairingToken}
+                >
+                  {vizioBusy === "confirm" ? "Pairing…" : "Confirm PIN"}
+                </button>
+                <button
+                  type="button"
+                  className="ref-find-auto"
+                  onClick={testVizioPlayFromSite}
+                  disabled={vizioBusy !== null || !vizioAuthToken}
+                >
+                  {vizioBusy === "test" ? "Sending Play…" : "Send Test Play"}
+                </button>
+                {vizioStatus && (
+                  <p className="ref-helper-note" role="status">
+                    {vizioStatus}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="ref-find-auto"
+                  onClick={() => enterCountdown("countdown-manual")}
+                  data-action="vizio-manual-countdown"
+                >
+                  Use manual countdown tonight
+                </button>
+              </div>
+            )}
             <div className="ref-bottom-cta">
               <button
                 type="button"
                 className="ref-cta-primary full"
                 onClick={() => {
+                  if (setupDevice === "vizio") {
+                    void startVizioPairingFromSite();
+                    return;
+                  }
                   setAutoPlayActive(true);
                   setScreen("result-success");
                 }}
                 data-action="connect-and-test"
               >
-                {setupGuide.primaryAction}
+                {setupDevice === "vizio" && vizioBusy === "start"
+                  ? "Starting…"
+                  : setupGuide.primaryAction}
               </button>
               <p className="flow-demo-toggle" aria-label="Demo result toggles">
                 <span>Demo:</span>
@@ -1240,6 +1460,53 @@ export function AppFlow() {
               </p>
             </div>
           </>
+        )}
+
+        {/* ─── TEST PLAY CONFIRM ─── */}
+        {screen === "test-confirm" && (
+          <div className="ref-result-stack">
+            <ScreenChrome
+              onBack={() => setScreen("device-setup")}
+              roomCode={roomCode}
+            />
+            <div className="ref-status-icon ref-status-success">
+              <CheckGlyph />
+            </div>
+            <h1 className="ref-result-title">Did the movie start?</h1>
+            <p className="ref-result-body">
+              If Test Play started the movie, pause it again now. Remote Start is
+              only ready after you confirm that paused state.
+            </p>
+            {vizioStatus && (
+              <p className="ref-helper-note" role="status">
+                {vizioStatus}
+              </p>
+            )}
+            <button
+              type="button"
+              className="ref-cta-primary full"
+              onClick={() => {
+                setAutoPlayActive(true);
+                setVizioStatus("VIZIO ready. Keep the movie paused until 3-2-1 Play.");
+                setScreen("result-success");
+              }}
+              data-action="confirm-test-play-paused"
+            >
+              Yes — I paused it again
+            </button>
+            <button
+              type="button"
+              className="ref-cta-secondary full"
+              onClick={() => {
+                setAutoPlayActive(false);
+                setVizioStatus("Use manual countdown tonight. No VIZIO Play command will be sent at PLAY.");
+                setScreen("result-fail");
+              }}
+              data-action="reject-test-play"
+            >
+              No — use manual countdown
+            </button>
+          </div>
         )}
 
         {/* ─── RESULT SUCCESS ─── */}

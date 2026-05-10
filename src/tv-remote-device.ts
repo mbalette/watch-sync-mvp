@@ -129,6 +129,174 @@ export interface RemoteStartOnboardingChoice {
 
 export const LINKED_TV_DEVICE_KEY = "watch-sync.linkedTvDevice.v1";
 
+export interface VizioD2cStepCopy {
+  id:
+    | "card"
+    | "before-setup"
+    | "pair-code"
+    | "open-movie"
+    | "test-play"
+    | "confirm";
+  title: string;
+  body: string;
+  primaryCta: string;
+  secondaryCta?: string;
+}
+
+export interface VizioD2cFlowCopy {
+  card: {
+    title: string;
+    badge: string;
+    description: string;
+    truthLine: string;
+  };
+  beforeSetup: {
+    title: string;
+    body: string;
+    privacyLine: string;
+    checklist: string[];
+    primaryCta: string;
+    fallbackCta: string;
+  };
+  pairCode: {
+    title: string;
+    body: string;
+    fieldLabel: string;
+    primaryCta: string;
+    helper: string;
+    secondaryCta: string;
+  };
+  openMovie: {
+    title: string;
+    body: string;
+    pauseInstruction: string;
+    warning: string;
+    primaryCta: string;
+  };
+  testPlay: {
+    title: string;
+    body: string;
+    afterTestInstruction: string;
+    primaryCta: string;
+    fallbackCta: string;
+  };
+  confirm: {
+    title: string;
+    yesCta: string;
+    noCta: string;
+    successTitle: string;
+    successBody: string;
+    savedNote: string;
+    successPrimary: string;
+    successSecondary: string;
+    successTertiary: string;
+  };
+  saved: {
+    title: string;
+    body: string;
+    primaryCta: string;
+    secondaryCta: string;
+    tertiaryCta: string;
+    caveat: string;
+    needsReverifyHint: string;
+  };
+}
+
+export const VIZIO_D2C_FLOW: VizioD2cFlowCopy = {
+  card: {
+    title: "VIZIO TV",
+    badge: "Pair with TV code",
+    description:
+      "Pair once with your TV, then 3-2-1 Play can press Play at the countdown.",
+    truthLine:
+      "Works when the movie is playing in the app on your VIZIO TV. If you’re casting from your phone, use manual countdown.",
+  },
+  beforeSetup: {
+    title: "Keep your VIZIO on and nearby",
+    body: "We’ll look for your TV on your Wi‑Fi and ask it to show a short pairing code.",
+    privacyLine:
+      "3-2-1 Play does not access your streaming accounts or choose titles. It only sends a local Play command to your TV.",
+    checklist: [
+      "VIZIO TV is on",
+      "This phone/browser is on the same Wi‑Fi",
+      "You’ll open the streaming app directly on the TV",
+      "You have the VIZIO remote nearby",
+    ],
+    primaryCta: "Find my VIZIO TV",
+    fallbackCta: "Use manual countdown tonight",
+  },
+  pairCode: {
+    title: "Enter the code from your TV",
+    body: "Your VIZIO should show a pairing code. Type it here to connect this device.",
+    fieldLabel: "TV code",
+    primaryCta: "Pair TV",
+    helper:
+      "If you don’t see a code, make sure your TV is on the same Wi‑Fi and try again.",
+    secondaryCta: "I don’t see a code",
+  },
+  openMovie: {
+    title: "Open the movie on your VIZIO",
+    body: "Use your normal VIZIO remote. Open the streaming app on the TV and start the movie.",
+    pauseInstruction: "Pause it exactly where you both want to begin.",
+    warning:
+      "Don’t cast from your phone for this setup. The video needs to be playing on the VIZIO TV app itself.",
+    primaryCta: "I paused the movie",
+  },
+  testPlay: {
+    title: "Test Auto Play",
+    body: "We’ll send one Play command to your VIZIO. Your movie should start.",
+    afterTestInstruction:
+      "After it starts, pause it again so it’s ready for the real countdown.",
+    primaryCta: "Send Test Play",
+    fallbackCta: "Use manual countdown instead",
+  },
+  confirm: {
+    title: "Did the movie start?",
+    yesCta: "Yes — I paused it again",
+    noCta: "No — use manual countdown",
+    successTitle: "VIZIO ready",
+    successBody:
+      "3-2-1 Play can press Play on this TV after you open the movie and pause it.",
+    savedNote:
+      "Your VIZIO is paired on this device. Next movie night, you won’t need to enter the code again.",
+    successPrimary: "Start 3-2-1 Play",
+    successSecondary: "Test Play again",
+    successTertiary: "Pair a different TV",
+  },
+  saved: {
+    title: "Saved VIZIO TV",
+    body: "Your VIZIO is paired on this device.",
+    primaryCta: "Use this VIZIO",
+    secondaryCta: "Test Play again",
+    tertiaryCta: "Pair a different TV",
+    caveat:
+      "You may need to pair again if you use a different browser, clear browser data, reset the TV, or change Wi‑Fi.",
+    needsReverifyHint: "Test Play before movie night",
+  },
+};
+
+export type VizioSavedDeviceState =
+  | "fresh"
+  | "saved-needs-test"
+  | "saved-ready";
+
+export function getVizioSavedDeviceState(
+  device: LinkedTvDevice | null,
+): VizioSavedDeviceState {
+  if (!device || device.platform !== "vizio_smartcast") return "fresh";
+  const hasPairing = Boolean(
+    device.host?.trim() && (device.authToken?.trim() ?? "") !== "",
+  );
+  if (!hasPairing) return "fresh";
+  if (!device.lastTestedAt || !device.useRemoteStartAtGo)
+    return "saved-needs-test";
+  return "saved-ready";
+}
+
+export function getVizioD2cFlow(): VizioD2cFlowCopy {
+  return VIZIO_D2C_FLOW;
+}
+
 const REMOTE_START_CAPABILITIES: Record<
   LinkedTvPlatform,
   RemoteStartCapability

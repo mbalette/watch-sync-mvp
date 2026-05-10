@@ -38,9 +38,11 @@ import {
   getRemoteStartWizard,
   getVisibleRemoteStartChoices,
   getVisibleTvPlatformOptions,
+  getVizioSavedDeviceState,
   isAllowedLocalHelperUrl,
   REMOTE_START_ONBOARDING_CHOICES,
   REMOTE_START_WATCHING_METHOD_CHOICES,
+  VIZIO_D2C_FLOW,
   loadLinkedTvDevice,
   normalizeLinkedTvDevice,
   platformNeedsHost,
@@ -59,6 +61,12 @@ import {
   normalizeRemoteStartRuntimeConfig,
 } from "./remote-start-runtime-config";
 import { logRemoteStartOutcome } from "./remote-start-outcome-log";
+import {
+  armNativeTvRemotePlay,
+  runNativeTvRemoteTestPlay,
+  sendNativeTvRemotePlayNow,
+  shouldUseNativeTvRemote,
+} from "./native-tv-remote";
 import {
   buildRecommendationDiscoverApiUrl,
   buildRecommendationSearchApiUrl,
@@ -215,6 +223,7 @@ function App() {
     () => !loadLinkedTvDevice(),
   );
   const [showRemoteSetupDetails, setShowRemoteSetupDetails] = useState(false);
+  const [showVizioAdvancedFields, setShowVizioAdvancedFields] = useState(false);
   const [showRecommendDrawer, setShowRecommendDrawer] = useState(false);
   const [showChat, setShowChat] = useState(false);
   const [chatDraft, setChatDraft] = useState("");
@@ -262,6 +271,8 @@ function App() {
   );
   const [pendingReadyDevice, setPendingReadyDevice] =
     useState<LinkedTvDevice | null>(null);
+  const [pendingNativeDeviceId, setPendingNativeDeviceId] = useState("");
+  const [readyNativeDeviceId, setReadyNativeDeviceId] = useState("");
   const [countdownText, setCountdownText] = useState("3");
   const [transportStatus, setTransportStatus] =
     useState<TransportStatus>("idle");
@@ -376,6 +387,14 @@ function App() {
         (option) => option.id === linkedTvDevice.platform,
       )
     : undefined;
+  const isVizioSelected = linkedTvDevice.platform === "vizio_smartcast";
+  const vizioFlow = VIZIO_D2C_FLOW;
+  const vizioSavedState = getVizioSavedDeviceState(linkedTvDevice);
+  const vizioReturningSaved =
+    isVizioSelected && vizioSavedState !== "fresh";
+  const vizioReady = isVizioSelected && vizioSavedState === "saved-ready";
+  const vizioNeedsTest =
+    isVizioSelected && vizioSavedState === "saved-needs-test";
   const selectedRemoteChoice = hasChosenRemotePlatform
     ? REMOTE_START_ONBOARDING_CHOICES.find(
         (choice) => choice.platform === linkedTvDevice.platform,
@@ -617,24 +636,31 @@ function App() {
         platform: savedDevice.platform,
         testPlayResult: "unknown",
       });
-      const payload = await runHelperRequest(request);
       const updates: Partial<LinkedTvDevice> = {};
-      if (
-        savedDevice.platform === "lg_webos" &&
-        typeof payload?.clientKey === "string"
-      )
-        updates.clientKey = payload.clientKey;
-      if (
-        savedDevice.platform === "samsung" &&
-        typeof payload?.token === "string"
-      )
-        updates.token = payload.token;
+      let nativeDeviceId = "";
+      if (shouldUseNativeTvRemote()) {
+        const nativeCandidate = await runNativeTvRemoteTestPlay(savedDevice);
+        nativeDeviceId = nativeCandidate.deviceId;
+      } else {
+        const payload = await runHelperRequest(request);
+        if (
+          savedDevice.platform === "lg_webos" &&
+          typeof payload?.clientKey === "string"
+        )
+          updates.clientKey = payload.clientKey;
+        if (
+          savedDevice.platform === "samsung" &&
+          typeof payload?.token === "string"
+        )
+          updates.token = payload.token;
+      }
       const pending = normalizeLinkedTvDevice({
         ...savedDevice,
         ...updates,
         lastTestedAt: undefined,
         useRemoteStartAtGo: false,
       });
+      setPendingNativeDeviceId(nativeDeviceId);
       setPendingReadyDevice(pending);
       setLinkedTvDevice(pending);
       saveLinkedTvDevice(pending);
@@ -654,6 +680,7 @@ function App() {
         failureCode: error instanceof Error ? error.message : "helper_failed",
       });
       setPendingReadyDevice(null);
+      setPendingNativeDeviceId("");
       setTvRemoteStatus(
         error instanceof Error
           ? error.message
@@ -676,6 +703,8 @@ function App() {
       useRemoteStartAtGo: true,
     });
     setPendingReadyDevice(null);
+    setReadyNativeDeviceId(pendingNativeDeviceId);
+    setPendingNativeDeviceId("");
     setLinkedTvDevice(ready);
     saveLinkedTvDevice(ready);
     logRemoteStartOutcome({
@@ -686,7 +715,7 @@ function App() {
     setTvRemoteStatus(
       `${ready.label} is ready for 3·2·1 Play. Keep the video paused; Watch Sync will send one Play command at PLAY.`,
     );
-  }, [pendingReadyDevice]);
+  }, [pendingNativeDeviceId, pendingReadyDevice]);
 
   const rejectTestPlayStarted = useCallback(() => {
     if (pendingReadyDevice)
@@ -697,6 +726,8 @@ function App() {
         manualPlayFallbackUsed: true,
       });
     setPendingReadyDevice(null);
+    setPendingNativeDeviceId("");
+    setReadyNativeDeviceId("");
     setLinkedTvDevice((current) =>
       normalizeLinkedTvDevice({
         ...current,
@@ -744,35 +775,61 @@ function App() {
         return;
       }
       saveLinkedTvDevice(savedDevice);
+      const nativeDeviceId = readyNativeDeviceId || pendingNativeDeviceId;
       setTvRemoteStatus(
-        savedDevice.platform === "home_assistant_webhook"
-          ? "Sending one Home Assistant webhook GO via local helper..."
-          : `Sending one ${savedDevice.label} Play command via local helper...`,
+        shouldUseNativeTvRemote()
+          ? `Sending one ${savedDevice.label} Play command through the installed app...`
+          : savedDevice.platform === "home_assistant_webhook"
+            ? "Sending one Home Assistant webhook GO via local helper..."
+            : `Sending one ${savedDevice.label} Play command via local helper...`,
       );
       try {
-        const request = buildDevicePlayRequest(
-          savedDevice,
-          remoteStartRuntimeConfig,
-          remoteStartInternalUnlocked,
-        );
-        if (savedDevice.platform === "home_assistant_webhook") {
-          request.body = {
-            ...(request.body ?? {}),
-            roomId: room?.roomId,
-            countdownId: String(
-              room?.countdownState.startedAt ??
-                room?.countdownState.startsAtEpochMs ??
-                "",
-            ),
-            issuedAt: nowIso(),
-          };
-        }
         logRemoteStartOutcome({
           type: "go_attempted",
           platform: savedDevice.platform,
           goResult: "unknown",
         });
-        await runHelperRequest(request);
+        if (shouldUseNativeTvRemote()) {
+          if (!nativeDeviceId) throw new Error("Run Test Play and confirm it before native Auto Play can send at PLAY.");
+          const countdownId = String(
+            room?.countdownState.startedAt ??
+              room?.countdownState.startsAtEpochMs ??
+              Date.now(),
+          );
+          if (source === "countdown") {
+            const playAtServerMs = Date.now();
+            const armed = await armNativeTvRemotePlay({
+              countdownId,
+              deviceId: nativeDeviceId,
+              playAtServerMs,
+              estimatedServerNowMs: playAtServerMs,
+              nowMonotonicMs: performance.now(),
+            });
+            if (!armed.ok) throw new Error(armed.errorMessage ?? armed.errorCode ?? "Native Auto Play arm failed.");
+          } else {
+            const sent = await sendNativeTvRemotePlayNow(countdownId, nativeDeviceId);
+            if (!sent.ok) throw new Error(sent.errorMessage ?? sent.errorCode ?? "Native Play command failed.");
+          }
+        } else {
+          const request = buildDevicePlayRequest(
+            savedDevice,
+            remoteStartRuntimeConfig,
+            remoteStartInternalUnlocked,
+          );
+          if (savedDevice.platform === "home_assistant_webhook") {
+            request.body = {
+              ...(request.body ?? {}),
+              roomId: room?.roomId,
+              countdownId: String(
+                room?.countdownState.startedAt ??
+                  room?.countdownState.startsAtEpochMs ??
+                  "",
+              ),
+              issuedAt: nowIso(),
+            };
+          }
+          await runHelperRequest(request);
+        }
         logRemoteStartOutcome({
           type: "go_sent",
           platform: savedDevice.platform,
@@ -799,6 +856,8 @@ function App() {
     },
     [
       linkedTvDevice,
+      pendingNativeDeviceId,
+      readyNativeDeviceId,
       remoteStartInternalUnlocked,
       remoteStartRuntimeConfig,
       room,
@@ -2269,6 +2328,79 @@ function App() {
                     countdown remains the fallback.
                   </p>
                 )}
+              {vizioReturningSaved && (
+                <section
+                  className="vizio-saved-card"
+                  data-vizio-saved-state={vizioSavedState}
+                  aria-label="Saved VIZIO TV"
+                >
+                  <div className="vizio-saved-heading">
+                    <span className="wizard-kicker">
+                      {vizioReady
+                        ? "VIZIO ready"
+                        : "Saved on this device"}
+                    </span>
+                    <h3>{vizioFlow.saved.title}</h3>
+                    <p>
+                      {vizioReady
+                        ? vizioFlow.confirm.savedNote
+                        : vizioFlow.saved.body}
+                    </p>
+                    {vizioNeedsTest && (
+                      <p className="vizio-saved-hint">
+                        {vizioFlow.saved.needsReverifyHint}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className="remote-button-row triple vizio-saved-actions"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHasChosenRemotePlatform(true);
+                        setRemoteWatchingMethod(
+                          inferWatchingMethod("vizio_smartcast"),
+                        );
+                        setShowVizioAdvancedFields(false);
+                      }}
+                    >
+                      {vizioFlow.saved.primaryCta}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={testLinkedDevice}
+                      disabled={!canRunConnectionCheck}
+                    >
+                      {vizioFlow.saved.secondaryCta}
+                    </button>
+                    <button
+                      type="button"
+                      className="vizio-saved-tertiary"
+                      onClick={() => {
+                        setHasChosenRemotePlatform(false);
+                        setShowVizioAdvancedFields(false);
+                        setPendingReadyDevice(null);
+                        setLinkedTvDevice(
+                          normalizeLinkedTvDevice({ platform: "roku" }),
+                        );
+                        saveLinkedTvDevice(
+                          normalizeLinkedTvDevice({ platform: "roku" }),
+                        );
+                        setRemoteWatchingMethod("");
+                        setTvRemoteStatus(
+                          "Saved VIZIO cleared from this browser. Pair a different TV from the steps below.",
+                        );
+                      }}
+                    >
+                      {vizioFlow.saved.tertiaryCta}
+                    </button>
+                  </div>
+                  <p className="mode-caveat vizio-saved-caveat">
+                    {vizioFlow.saved.caveat}
+                  </p>
+                </section>
+              )}
               <section
                 className="remote-onboarding-flow"
                 aria-label="Remote Start onboarding"
@@ -2453,11 +2585,52 @@ function App() {
                   <div className="wizard-action-row">
                     <strong>What next:</strong>
                     <span>
-                      Enter the local details below → Save setup → Test Play →
-                      enable GO Play if it works.
+                      {isVizioSelected
+                        ? "Find your VIZIO TV → enter the on-screen pairing code → open the movie on the TV → Send Test Play → confirm it started."
+                        : "Enter the local details below → Save setup → Test Play → enable GO Play if it works."}
                     </span>
                   </div>
                   <p className="mode-caveat">{remoteStartWizard.publicCopy}</p>
+                  {isVizioSelected && !vizioReady && (
+                    <div
+                      className="vizio-d2c-prologue"
+                      aria-label="VIZIO before-setup checklist"
+                    >
+                      <div className="vizio-d2c-block">
+                        <span className="wizard-kicker">Before setup</span>
+                        <h4>{vizioFlow.beforeSetup.title}</h4>
+                        <p>{vizioFlow.beforeSetup.body}</p>
+                        <p className="vizio-d2c-truth">
+                          {vizioFlow.beforeSetup.privacyLine}
+                        </p>
+                        <ul className="vizio-d2c-checklist">
+                          {vizioFlow.beforeSetup.checklist.map((item) => (
+                            <li key={item}>{item}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="vizio-d2c-block">
+                        <span className="wizard-kicker">Open the movie</span>
+                        <h4>{vizioFlow.openMovie.title}</h4>
+                        <p>{vizioFlow.openMovie.body}</p>
+                        <p>
+                          <strong>{vizioFlow.openMovie.pauseInstruction}</strong>
+                        </p>
+                        <p className="vizio-d2c-warning">
+                          {vizioFlow.openMovie.warning}
+                        </p>
+                      </div>
+                      <div className="vizio-d2c-block">
+                        <span className="wizard-kicker">Test Auto Play</span>
+                        <h4>{vizioFlow.testPlay.title}</h4>
+                        <p>{vizioFlow.testPlay.body}</p>
+                        <p>{vizioFlow.testPlay.afterTestInstruction}</p>
+                      </div>
+                      <p className="vizio-d2c-truth">
+                        {vizioFlow.card.truthLine}
+                      </p>
+                    </div>
+                  )}
                 </section>
               ) : (
                 <section
@@ -2512,6 +2685,40 @@ function App() {
                       </small>
                     )}
                   </label>
+                  {isVizioSelected && !showVizioAdvancedFields && (
+                    <div
+                      className="vizio-d2c-pair-step"
+                      aria-label="VIZIO pair-with-code consumer step"
+                    >
+                      <span className="wizard-kicker">
+                        {vizioReturningSaved
+                          ? "Update saved VIZIO"
+                          : "Pair with TV code"}
+                      </span>
+                      <h4>{vizioFlow.pairCode.title}</h4>
+                      <p>{vizioFlow.pairCode.body}</p>
+                      <p className="vizio-d2c-helper">
+                        {vizioFlow.pairCode.helper}
+                      </p>
+                      <div className="remote-button-row triple">
+                        <button
+                          type="button"
+                          onClick={() => setShowVizioAdvancedFields(true)}
+                        >
+                          {vizioReturningSaved
+                            ? "Edit address manually"
+                            : vizioFlow.beforeSetup.primaryCta}
+                        </button>
+                        <button
+                          type="button"
+                          className="vizio-d2c-secondary"
+                          onClick={() => setShowVizioAdvancedFields(true)}
+                        >
+                          {vizioFlow.pairCode.secondaryCta}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {linkedTvDevice.platform === "home_assistant_webhook" ? (
                     <label className="field-label compact">
                       <span>Home Assistant webhook URL</span>
@@ -2527,7 +2734,8 @@ function App() {
                         aria-label="Home Assistant webhook URL"
                       />
                     </label>
-                  ) : platformNeedsHost(linkedTvDevice.platform) ? (
+                  ) : platformNeedsHost(linkedTvDevice.platform) &&
+                    (!isVizioSelected || showVizioAdvancedFields) ? (
                     <label className="field-label compact">
                       <span>
                         {linkedTvDevice.platform === "android_adb"
@@ -2549,24 +2757,28 @@ function App() {
                       />
                     </label>
                   ) : null}
-                  {tvCapability.requiresLocalHelper && (
-                    <label className="field-label compact">
-                      <span>Helper URL</span>
-                      <input
-                        value={linkedTvDevice.helperUrl}
-                        onChange={(event) =>
-                          updateLinkedDevice({ helperUrl: event.target.value })
-                        }
-                        placeholder="http://127.0.0.1:8790"
-                        inputMode="url"
-                        aria-label="TV remote helper URL"
-                      />
-                    </label>
-                  )}
+                  {tvCapability.requiresLocalHelper &&
+                    (!isVizioSelected || showVizioAdvancedFields) && (
+                      <label className="field-label compact">
+                        <span>Helper URL</span>
+                        <input
+                          value={linkedTvDevice.helperUrl}
+                          onChange={(event) =>
+                            updateLinkedDevice({
+                              helperUrl: event.target.value,
+                            })
+                          }
+                          placeholder="http://127.0.0.1:8790"
+                          inputMode="url"
+                          aria-label="TV remote helper URL"
+                        />
+                      </label>
+                    )}
                   {linkedTvDevice.platform !== "roku" &&
                     linkedTvDevice.platform !== "home_assistant_webhook" &&
                     linkedTvDevice.platform !== "android_adb" &&
-                    linkedTvDevice.platform !== "apple_tv_manual" && (
+                    linkedTvDevice.platform !== "apple_tv_manual" &&
+                    (!isVizioSelected || showVizioAdvancedFields) && (
                       <label className="field-label compact">
                         <span>Protocol URL override</span>
                         <input
@@ -2580,38 +2792,50 @@ function App() {
                         />
                       </label>
                     )}
-                  {platformNeedsPairing(linkedTvDevice.platform) && (
-                    <label className="field-label compact">
-                      <span>
-                        {linkedTvDevice.platform === "lg_webos"
-                          ? "LG client key"
-                          : linkedTvDevice.platform === "samsung"
-                            ? "Samsung token"
-                            : "Vizio auth token"}
-                      </span>
-                      <input
-                        value={
-                          linkedTvDevice.platform === "lg_webos"
-                            ? (linkedTvDevice.clientKey ?? "")
+                  {platformNeedsPairing(linkedTvDevice.platform) &&
+                    (!isVizioSelected || showVizioAdvancedFields) && (
+                      <label className="field-label compact">
+                        <span>
+                          {linkedTvDevice.platform === "lg_webos"
+                            ? "LG client key"
                             : linkedTvDevice.platform === "samsung"
-                              ? (linkedTvDevice.token ?? "")
-                              : (linkedTvDevice.authToken ?? "")
-                        }
-                        onChange={(event) =>
-                          updateLinkedDevice(
+                              ? "Samsung token"
+                              : isVizioSelected
+                                ? vizioFlow.pairCode.fieldLabel
+                                : "Vizio auth token"}
+                        </span>
+                        <input
+                          value={
                             linkedTvDevice.platform === "lg_webos"
-                              ? { clientKey: event.target.value }
+                              ? (linkedTvDevice.clientKey ?? "")
                               : linkedTvDevice.platform === "samsung"
-                                ? { token: event.target.value }
-                                : { authToken: event.target.value },
-                          )
-                        }
-                        placeholder="Stored locally only"
-                        type="password"
-                        autoComplete="off"
-                        aria-label="Local pairing token"
-                      />
-                    </label>
+                                ? (linkedTvDevice.token ?? "")
+                                : (linkedTvDevice.authToken ?? "")
+                          }
+                          onChange={(event) =>
+                            updateLinkedDevice(
+                              linkedTvDevice.platform === "lg_webos"
+                                ? { clientKey: event.target.value }
+                                : linkedTvDevice.platform === "samsung"
+                                  ? { token: event.target.value }
+                                  : { authToken: event.target.value },
+                            )
+                          }
+                          placeholder="Stored locally only"
+                          type="password"
+                          autoComplete="off"
+                          aria-label="Local pairing token"
+                        />
+                      </label>
+                    )}
+                  {isVizioSelected && showVizioAdvancedFields && (
+                    <button
+                      className="details-toggle vizio-advanced-toggle"
+                      type="button"
+                      onClick={() => setShowVizioAdvancedFields(false)}
+                    >
+                      Hide manual address fields
+                    </button>
                   )}
                   {platformNeedsSonyIrcc(linkedTvDevice.platform) && (
                     <>
@@ -2660,11 +2884,15 @@ function App() {
                     className="wizard-action-row setup-next-line"
                     aria-label="Remote Start setup sequence"
                   >
-                    <strong>Next:</strong>
+                    <strong>{isVizioSelected ? "What now:" : "Next:"}</strong>
                     <span>
-                      {linkedTvMissingConfig
-                        ? "Enter the device details above, then save setup."
-                        : "Save setup, test Play, then enable GO Play only if the test works."}
+                      {isVizioSelected
+                        ? linkedTvMissingConfig
+                          ? "Open Edit address manually above, paste your VIZIO IP and pairing token, then send Test Play."
+                          : "Open the movie on your VIZIO, pause it, then send Test Play."
+                        : linkedTvMissingConfig
+                          ? "Enter the device details above, then save setup."
+                          : "Save setup, test Play, then enable GO Play only if the test works."}
                     </span>
                   </div>
                   <div className="remote-button-row triple primary-setup-actions">
@@ -2675,7 +2903,9 @@ function App() {
                     >
                       {linkedTvMissingConfig
                         ? "Save setup after details"
-                        : "Save setup"}
+                        : isVizioSelected
+                          ? "Save VIZIO pairing"
+                          : "Save setup"}
                     </button>
                     {isPublicRemoteStartLane ? (
                       <button
@@ -2684,8 +2914,12 @@ function App() {
                         disabled={!canRunConnectionCheck}
                       >
                         {linkedTvMissingConfig
-                          ? "Test Play after details"
-                          : remoteStartWizard.primaryAction}
+                          ? isVizioSelected
+                            ? "Send Test Play after pairing"
+                            : "Test Play after details"
+                          : isVizioSelected
+                            ? vizioFlow.testPlay.primaryCta
+                            : remoteStartWizard.primaryAction}
                       </button>
                     ) : (
                       <button type="button" disabled>
@@ -2696,21 +2930,82 @@ function App() {
                   {pendingReadyDevice &&
                     !remoteStartRuntimeConfig.remoteStartKillSwitchEnabled && (
                       <div
-                        className="wizard-action-row setup-next-line"
+                        className="wizard-action-row setup-next-line vizio-confirm-row"
                         aria-label="Confirm Test Play result"
                       >
-                        <strong>Did the video start?</strong>
+                        <strong>
+                          {isVizioSelected
+                            ? vizioFlow.confirm.title
+                            : "Did the video start?"}
+                        </strong>
                         <span>
-                          Pause it again before marking Remote Start ready.
+                          {isVizioSelected
+                            ? vizioFlow.testPlay.afterTestInstruction
+                            : "Pause it again before marking Remote Start ready."}
                         </span>
                         <button type="button" onClick={confirmTestPlayStarted}>
-                          Yes — I paused it again
+                          {vizioFlow.confirm.yesCta}
                         </button>
                         <button type="button" onClick={rejectTestPlayStarted}>
-                          No — use manual countdown
+                          {vizioFlow.confirm.noCta}
                         </button>
                       </div>
                     )}
+                  {vizioReady && !pendingReadyDevice && (
+                    <div
+                      className="vizio-success-block"
+                      aria-label="VIZIO ready summary"
+                    >
+                      <span className="wizard-kicker">
+                        {vizioFlow.confirm.successTitle}
+                      </span>
+                      <h4>{vizioFlow.confirm.successTitle}</h4>
+                      <p>{vizioFlow.confirm.successBody}</p>
+                      <p className="vizio-saved-note">
+                        {vizioFlow.confirm.savedNote}
+                      </p>
+                      <div className="remote-button-row triple vizio-success-actions">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowTvRemoteDrawer(false);
+                            setTvRemoteStatus(
+                              "VIZIO is ready. Open the movie on your TV, pause it, then ready up for 3-2-1 Play.",
+                            );
+                          }}
+                        >
+                          {vizioFlow.confirm.successPrimary}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={testLinkedDevice}
+                          disabled={!canRunConnectionCheck}
+                        >
+                          {vizioFlow.confirm.successSecondary}
+                        </button>
+                        <button
+                          type="button"
+                          className="vizio-saved-tertiary"
+                          onClick={() => {
+                            setHasChosenRemotePlatform(false);
+                            setShowVizioAdvancedFields(false);
+                            setPendingReadyDevice(null);
+                            const fresh = normalizeLinkedTvDevice({
+                              platform: "roku",
+                            });
+                            setLinkedTvDevice(fresh);
+                            saveLinkedTvDevice(fresh);
+                            setRemoteWatchingMethod("");
+                            setTvRemoteStatus(
+                              "Saved VIZIO cleared from this browser. Pair a different TV from the steps above.",
+                            );
+                          }}
+                        >
+                          {vizioFlow.confirm.successTertiary}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                   {isPublicRemoteStartLane &&
                     hasRecentHelperCheck &&
                     tvCapability.canSendPlay && (
@@ -2811,7 +3106,7 @@ function App() {
           {showLaptopDrawer && (
             <div className="drawer-content">
               <p>
-                Manual mode works with any TV. Auto-sync only works on supported
+                Manual mode is available for any TV. Auto-sync only works on supported
                 browser tabs where the Chrome extension can access an HTML5
                 video.
               </p>

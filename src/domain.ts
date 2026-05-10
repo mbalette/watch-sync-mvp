@@ -124,6 +124,7 @@ export type RoomEvent =
   | { type: 'participant_ready'; participantId: string; ready: boolean; at: string }
   | { type: 'setup_updated'; setup: WatchSetup; actorId: string; at: string }
   | { type: 'countdown_started'; actorId: string; startsAtEpochMs: number; durationSeconds: number; at: string }
+  | { type: 'countdown_go'; countdownId: string; playAtServerMs: number; at: string }
   | { type: 'countdown_cancelled'; actorId: string; at: string }
   | { type: 'play_now'; actorId: string; at: string }
   | { type: 'pause_requested'; actorId: string; at: string }
@@ -292,6 +293,18 @@ export function isRoomEvent(value: unknown): value is RoomEvent {
       return isWatchSetup(value.setup) && hasActor(value)
     case 'countdown_started':
       return hasActor(value) && typeof value.startsAtEpochMs === 'number' && typeof value.durationSeconds === 'number'
+    case 'countdown_go':
+      return typeof value.countdownId === 'string'
+        && value.countdownId.length > 0
+        && typeof value.playAtServerMs === 'number'
+        && Number.isFinite(value.playAtServerMs)
+        && !('host' in value)
+        && !('ip' in value)
+        && !('token' in value)
+        && !('pin' in value)
+        && !('webhookUrl' in value)
+        && !('authToken' in value)
+        && !('clientKey' in value)
     case 'countdown_cancelled':
     case 'play_now':
     case 'pause_requested':
@@ -509,6 +522,19 @@ export function applyRoomEvent(room: RoomState, event: RoomEvent): RoomState {
           startedAt: event.at,
           startsAtEpochMs: event.startsAtEpochMs,
           durationSeconds: event.durationSeconds,
+        },
+      }
+    case 'countdown_go':
+      return {
+        ...next,
+        countdownState: { ...normalizedRoom.countdownState, phase: 'play' },
+        lastSyncAt: event.at,
+        lastSignal: {
+          type: 'play_now',
+          actorId: '321play-system',
+          actorName: '321 Play',
+          message: 'PLAY — installed apps use this timing locally; no TV secrets are sent to the room.',
+          createdAt: event.at,
         },
       }
     case 'countdown_cancelled':

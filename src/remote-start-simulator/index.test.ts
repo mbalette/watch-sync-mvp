@@ -70,6 +70,7 @@ describe("remote-start synthetic playback-state simulator", () => {
       "device_asleep",
       "wrong_app_focused",
       "helper_unavailable",
+      "native_bridge_unavailable",
       "network_blocked",
       "pairing_denied",
       "pairing_timeout",
@@ -81,8 +82,9 @@ describe("remote-start synthetic playback-state simulator", () => {
     expect(matrix.every((row) => row.certifiedHardwareValidation === false && row.fakeSuccessClaimed === false)).toBe(true);
   });
 
-  it("covers Roku TV, Roku streaming, VIZIO, LG, Sony, and Samsung valid-state gating", () => {
+  it("covers non-manual platform valid-state gating", () => {
     for (const platform of REMOTE_START_SIMULATOR_PLATFORMS) {
+      if (platform === "manual_countdown") continue;
       const { afterTest, afterConfirm, afterGo, afterManual } = exerciseValidState(platform);
       expect(afterTest.helperCommands).toHaveLength(1);
       expect(afterTest.pendingUserConfirmation).toBe(true);
@@ -93,6 +95,16 @@ describe("remote-start synthetic playback-state simulator", () => {
       expect(afterManual.helperCommands).toHaveLength(0);
       expect(afterManual.goResult).toBe("manual");
     }
+  });
+
+  it("keeps manual countdown in no-command fallback even for paused synthetic states", () => {
+    const { afterTest, afterConfirm, afterGo, afterManual } = exerciseValidState("manual_countdown");
+    expect(afterTest.helperCommands).toHaveLength(0);
+    expect(afterTest.pendingUserConfirmation).toBe(false);
+    expect(afterConfirm.readyPersisted).toBe(false);
+    expect(afterGo.goResult).toBe("blocked");
+    expect(afterGo.manualFallbackVisible).toBe(true);
+    expect(afterManual.goResult).toBe("manual");
   });
 
   it("keeps invalid states manual-only with no persisted ready and no fake success", () => {
@@ -123,9 +135,11 @@ describe("remote-start synthetic playback-state simulator", () => {
     expect(isRemoteStartPlatformEnabled("roku", { ...internalRoku, remoteStartKillSwitchEnabled: true }, true)).toBe(false);
     expect(isRemoteStartPlatformEnabled("vizio_smartcast", internalRoku, true)).toBe(false);
 
-    const qa = applyQaRemoteStartBetaPlatform(internalRoku, "?remoteStartBeta=internal&platformBeta=vizio");
+    const qa = applyQaRemoteStartBetaPlatform(internalRoku, "?remoteStartBeta=internal&qaBetaPlatform=vizio");
     expect(isRemoteStartPlatformEnabled("vizio_smartcast", qa, true)).toBe(true);
     expect(isRemoteStartPlatformEnabled("vizio_smartcast", qa, false)).toBe(false);
+    const legacyAlias = applyQaRemoteStartBetaPlatform(internalRoku, "?remoteStartBeta=internal&platformBeta=vizio");
+    expect(isRemoteStartPlatformEnabled("vizio_smartcast", legacyAlias, true)).toBe(true);
     expect(normalizeRemoteStartRuntimeConfig({ remoteStartPublicEnabled: "yes", rokuRuntimeBetaEnabled: "yes" })).toMatchObject({
       remoteStartPublicEnabled: false,
       rokuRuntimeBetaEnabled: false,
@@ -144,10 +158,24 @@ describe("remote-start synthetic playback-state simulator", () => {
       platform: "roku",
       deviceType: "roku_tv",
       streamingApp: "Netflix",
+      adapterFamily: "roku",
+      latencyMs: 42,
+      source: "synthetic",
       goResult: "success_self_report",
+      failureCode: "failed for http://192.168.1.23:8060/path?token=abc123",
+      hardwareValidation: true,
     });
     for (const field of forbiddenFields) expect(Object.hasOwn(clean, field)).toBe(false);
-    expect(clean).toMatchObject({ type: "go_sent", platform: "roku", deviceType: "roku_tv" });
-    expect(JSON.stringify(clean)).not.toMatch(/secret-|redacted@example|192\.0\.2/);
+    expect(clean).toMatchObject({
+      type: "go_sent",
+      platform: "roku",
+      deviceType: "roku_tv",
+      adapterFamily: "roku",
+      latencyMs: 42,
+      source: "synthetic",
+      hardwareValidation: false,
+    });
+    expect(clean.failureCode).toBeUndefined();
+    expect(JSON.stringify(clean)).not.toMatch(/secret-|redacted@example|192\.168|token=|http:\/\//);
   });
 });

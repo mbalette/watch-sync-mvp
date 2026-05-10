@@ -262,6 +262,7 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
           ok: true,
           platform: "vizio-runtime-beta",
           pairingToken: result.pairingToken,
+          challengeType: result.challengeType,
         });
         return;
       }
@@ -275,6 +276,7 @@ export function createTvRemoteHelperServer(deps: TvRemoteHelperDeps = {}) {
             url: optionalBodyString(body.url),
             timeoutMs: optionalBodyNumber(body.timeoutMs),
             pairingToken: optionalBodyString(body.pairingToken),
+            challengeType: optionalBodyString(body.challengeType),
             deviceId: optionalBodyString(body.deviceId),
           },
         );
@@ -441,6 +443,7 @@ function setCors(req: http.IncomingMessage, res: http.ServerResponse) {
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Private-Network", "true");
 }
 
 function allowedBrowserOrigin(origin: string): boolean {
@@ -458,7 +461,8 @@ function allowedBrowserOrigin(origin: string): boolean {
       return true;
     if (
       parsed.protocol === "https:" &&
-      parsed.hostname === "app.kyrosdirect.tech"
+      (parsed.hostname === "app.kyrosdirect.tech" ||
+        parsed.hostname === "321play.kyrosdirect.tech")
     )
       return true;
     if (

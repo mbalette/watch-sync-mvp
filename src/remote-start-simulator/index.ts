@@ -12,6 +12,7 @@ export type RemoteStartSimulatorState =
   | "device_asleep"
   | "wrong_app_focused"
   | "helper_unavailable"
+  | "native_bridge_unavailable"
   | "network_blocked"
   | "pairing_denied"
   | "pairing_timeout"
@@ -24,7 +25,9 @@ export type RemoteStartSimulatorPlatform =
   | "vizio"
   | "lg"
   | "sony"
-  | "samsung";
+  | "samsung"
+  | "android_google_fire_tv"
+  | "manual_countdown";
 
 export type RemoteStartSimulatorAction = "test_play" | "confirm_yes" | "go" | "manual";
 
@@ -55,6 +58,7 @@ export const REMOTE_START_SIMULATOR_STATES: RemoteStartSimulatorState[] = [
   "device_asleep",
   "wrong_app_focused",
   "helper_unavailable",
+  "native_bridge_unavailable",
   "network_blocked",
   "pairing_denied",
   "pairing_timeout",
@@ -69,6 +73,8 @@ export const REMOTE_START_SIMULATOR_PLATFORMS: RemoteStartSimulatorPlatform[] = 
   "lg",
   "sony",
   "samsung",
+  "android_google_fire_tv",
+  "manual_countdown",
 ];
 
 const VALID_PAUSED_STATES = new Set<RemoteStartSimulatorState>([
@@ -84,6 +90,8 @@ const PLATFORM_COMMAND: Record<RemoteStartSimulatorPlatform, string> = {
   lg: "lg.ssap.media.controls.play",
   sony: "sony.IRCC.Play",
   samsung: "samsung.KEY_PLAY",
+  android_google_fire_tv: "android.KEYCODE_MEDIA_PLAY",
+  manual_countdown: "manual.countdown.no-command",
 };
 
 export function isRemoteStartSimulatorValidPausedState(state: RemoteStartSimulatorState): boolean {
@@ -117,7 +125,7 @@ export function runRemoteStartSimulatorAction(
     return next;
   }
   if (action === "test_play") {
-    if (VALID_PAUSED_STATES.has(next.state)) {
+    if (VALID_PAUSED_STATES.has(next.state) && next.platform !== "manual_countdown") {
       next.helperCommands.push(PLATFORM_COMMAND[next.platform]);
       next.pendingUserConfirmation = true;
       next.readyPersisted = false;
@@ -138,7 +146,7 @@ export function runRemoteStartSimulatorAction(
     return next;
   }
   if (action === "go") {
-    if (next.readyPersisted) {
+    if (next.readyPersisted && next.platform !== "manual_countdown") {
       next.helperCommands.push(PLATFORM_COMMAND[next.platform]);
       next.goResult = "sent";
     } else {

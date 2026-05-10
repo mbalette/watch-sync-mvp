@@ -1,0 +1,46 @@
+## main...origin/main
+ M artifacts/remote-start-simulator/state-matrix.json
+ M eslint.config.js
+ M package-lock.json
+ M package.json
+ M scripts/remote-start-simulator-export.ts
+ M server/tv-remote-helper.ts
+ M server/vizio-smartcast-remote.test.ts
+ M server/vizio-smartcast-remote.ts
+ M src/App.tsx
+ M src/AppFlow.tsx
+ M src/LiveRoomApp.tsx
+ M src/app-flow.css
+ M src/domain.test.ts
+ M src/domain.ts
+ M src/remote-start-outcome-log.ts
+ M src/remote-start-outcome-sanitizer.ts
+ M src/remote-start-simulator/index.test.ts
+ M src/remote-start-simulator/index.ts
+ M src/tv-remote-device.ts
+?? android/
+?? artifacts/remote-start-nonhardware/
+?? capacitor.config.ts
+?? ios/
+?? packages/
+?? receipts/321play-native-tvremote-10hour-final-20260510-011137.md
+?? receipts/321play-native-tvremote-preflight-20260510-011137.md
+?? receipts/321play-production-push-20260509-233841.md
+?? receipts/jackie-final-321play-photo-id-visual-20260509.md
+?? receipts/kramer-vizio-d2c-autoplay-goal-20260509.md
+?? receipts/vizio-local-bridge-blocked-20260510-001625.md
+?? receipts/vizio-site-pairing-wiring-20260510-000426.md
+?? screenshots/production-321play-deploy-20260509/
+?? screenshots/vizio-site-local-bridge-20260510/
+?? screenshots/vizio-site-pairing-live-20260510/
+?? scripts/capture-production-321play-deploy-20260509.mjs
+?? scripts/capture-vizio-site-pairing-live-20260510.mjs
+?? scripts/create-vizio-local-contact-sheet-20260510.py
+?? scripts/remote-start-nonhardware-outcome-sample.ts
+?? scripts/scan-no-react-lan.mjs
+?? scripts/scan-remote-start-nonhardware-artifacts.mjs
+?? scripts/scan-remote-start-public-claims.mjs
+?? scripts/vizio-bridge-browser-proof-20260510.mjs
+?? src/native-tv-remote.test.ts
+?? src/native-tv-remote.ts
+?? tsconfig.tvremote.json

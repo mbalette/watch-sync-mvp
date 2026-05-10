@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">321 Play</string>
+    <string name="title_activity_main">321 Play</string>
+    <string name="package_name">tech.kyrosdirect.play321</string>
+    <string name="custom_url_scheme">tech.kyrosdirect.play321</string>
+</resources>

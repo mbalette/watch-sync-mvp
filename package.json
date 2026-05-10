@@ -25,9 +25,18 @@
     "test:remote-start-simulator": "vitest run src/remote-start-simulator/index.test.ts && tsx scripts/remote-start-simulator-export.ts",
     "remote-start:summary": "tsx scripts/remote-start-summary.ts",
     "remote-start:events:export": "tsx scripts/remote-start-events-export.ts",
-    "remote-start:events:prune": "tsx scripts/remote-start-events-prune.ts"
+    "remote-start:events:prune": "tsx scripts/remote-start-events-prune.ts",
+    "remote-start:nonhardware:outcome-sample": "tsx scripts/remote-start-nonhardware-outcome-sample.ts",
+    "scan:remote-start-artifacts": "node scripts/scan-remote-start-nonhardware-artifacts.mjs",
+    "scan:remote-start-public-claims": "node scripts/scan-remote-start-public-claims.mjs",
+    "test:tv-remote-bridge": "vitest run packages/tv-remote-bridge/index.test.ts",
+    "scan:no-react-lan": "node scripts/scan-no-react-lan.mjs",
+    "typecheck:tv-remote-bridge": "tsc -p tsconfig.tvremote.json"
   },
   "dependencies": {
+    "@capacitor/android": "^8.3.3",
+    "@capacitor/core": "^8.3.3",
+    "@capacitor/ios": "^8.3.3",
     "@types/ws": "^8.18.1",
     "concurrently": "^9.2.1",
     "react": "^19.2.5",
@@ -36,6 +45,7 @@
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.3.3",
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",

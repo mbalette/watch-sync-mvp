@@ -1,0 +1,20 @@
+artifacts/remote-start-simulator/state-matrix.json | 618 ++++++++++++++-
+ eslint.config.js                                   |   2 +-
+ package-lock.json                                  | 882 +++++++++++++++++++++
+ package.json                                       |  12 +-
+ scripts/remote-start-simulator-export.ts           |  34 +-
+ server/tv-remote-helper.ts                         |   6 +-
+ server/vizio-smartcast-remote.test.ts              |  18 +-
+ server/vizio-smartcast-remote.ts                   |  38 +-
+ src/App.tsx                                        |   6 +-
+ src/AppFlow.tsx                                    | 301 ++++++-
+ src/LiveRoomApp.tsx                                | 481 ++++++++---
+ src/app-flow.css                                   |  23 +
+ src/domain.test.ts                                 |  15 +
+ src/domain.ts                                      |  26 +
+ src/remote-start-outcome-log.ts                    |   2 +-
+ src/remote-start-outcome-sanitizer.ts              |  15 +-
+ src/remote-start-simulator/index.test.ts           |  36 +-
+ src/remote-start-simulator/index.ts                |  14 +-
+ src/tv-remote-device.ts                            | 168 ++++
+ 19 files changed, 2558 insertions(+), 139 deletions(-)

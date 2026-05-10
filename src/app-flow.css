@@ -302,3 +302,26 @@
   text-underline-offset: 3px;
   padding: 0;
 }
+
+.ref-input-label {
+  display: block;
+  margin: 14px 0 8px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #8a8895;
+}
+
+.ref-helper-note {
+  margin: 10px 0 0;
+  color: #8a8895;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.ref-find-auto:disabled,
+.ref-cta-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
