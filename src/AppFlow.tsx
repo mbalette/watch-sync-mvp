@@ -1017,7 +1017,7 @@ export function AppFlow() {
               </span>
               <strong>Identify with a photo</strong>
               <em>
-                Snap your TV or remote, or<br />choose from photos.
+                Snap your TV or remote, or<br />choose from photos. Make sure the brand name is clearly showing.
               </em>
             </button>
             <p className="ref-photo-privacy">
@@ -1051,7 +1051,9 @@ export function AppFlow() {
             <div className="ref-sheet" role="dialog" aria-label="Photo options">
               <span className="ref-sheet-handle" aria-hidden="true" />
               <h2 className="ref-sheet-title">Press Play together.</h2>
-              <p className="ref-sheet-sub">from anywhere</p>
+              <p className="ref-sheet-sub">
+                Make sure the TV or remote brand name is clearly showing.
+              </p>
               <button
                 type="button"
                 className="ref-sheet-action flow-tap"
